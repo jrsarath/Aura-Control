@@ -4,6 +4,8 @@
 #include <esp_err.h>
 #include <esp_matter.h>
 
+using namespace esp_matter;
+
 #if CHIP_DEVICE_CONFIG_ENABLE_THREAD
 #include "esp_openthread_types.h"
 #endif
@@ -16,24 +18,16 @@ extern "C" {
 
 typedef void *driver_handle;
 
-/** Initialize the Temperature driver
- *
- * This initializes the temperature driver associated with the selected board.
- *
- * @return Handle on success.
- * @return NULL in case of failure.
- */
-driver_handle driver_dht_init();
-/** Initialize the Air Quality driver
- *
- * This initializes the temperature driver associated with the selected board.
+/** 
+ * Initialize the Switch driver
+ * This initializes the switch driver associated with the selected board.
  *
  * @return Handle on success.
  * @return NULL in case of failure.
  */
-driver_handle driver_voc_init();
-/** Initialize the button driver
- *
+driver_handle switch_init(gpio_num_t gpio_pin);
+/** 
+ * Initialize the button driver
  * This initializes the button driver associated with the selected board.
  *
  * @return Handle on success.
@@ -42,8 +36,8 @@ driver_handle driver_voc_init();
 driver_handle driver_button_init();
 
 
-/** Driver Update
- *
+/** 
+ * Driver Update
  * This API should be called to update the driver for the attribute being updated.
  * This is usually called from the common `app_attribute_update_cb()`.
  *
@@ -55,8 +49,9 @@ driver_handle driver_button_init();
  * @return ESP_OK on success.
  * @return error in case of failure.
  */
-esp_err_t driver_attribute_update(driver_handle driver_handle, uint16_t endpoint_id, uint32_t cluster_id, uint32_t attribute_id, esp_matter_attr_val_t *val);
 
+esp_err_t create_plug(gpio_num_t gpio_pin, node_t* node);
+esp_err_t driver_attribute_update(driver_handle driver_handle, uint16_t endpoint_id, uint32_t cluster_id, uint32_t attribute_id, esp_matter_attr_val_t *val);
 esp_err_t sensor_attribute_update_cb(esp_matter::attribute::callback_type_t type, uint16_t endpoint_id, uint32_t cluster_id, uint32_t attribute_id, esp_matter_attr_val_t *val, void *priv_data);
 
 #if CHIP_DEVICE_CONFIG_ENABLE_THREAD

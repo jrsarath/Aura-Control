@@ -10,7 +10,7 @@
     "idf.openOcdConfigs": [
         "board/esp32-wrover-kit-3.3v.cfg"
     ],
-    "idf.port": "/dev/tty.debug-console",
+    "idf.port": "/dev/tty.usbserial-0001",
     "idf.pythonBinPath": "/Users/sarath/.espressif/python_env/idf5.2_py3.12_env/bin/python",
     "idf.toolsPath": "/Users/sarath/.espressif",
     "idf.flashType": "UART"
