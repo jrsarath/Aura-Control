@@ -25,7 +25,7 @@ typedef void *driver_handle;
  * @return Handle on success.
  * @return NULL in case of failure.
  */
-driver_handle switch_init(gpio_num_t gpio_pin);
+driver_handle switch_init(int gpio_pin);
 /** 
  * Initialize the button driver
  * This initializes the button driver associated with the selected board.
@@ -50,7 +50,7 @@ driver_handle driver_button_init();
  * @return error in case of failure.
  */
 
-esp_err_t create_plug(gpio_num_t gpio_pin, node_t* node);
+esp_err_t create_plug(int gpio_pin, node_t* node);
 esp_err_t driver_attribute_update(driver_handle driver_handle, uint16_t endpoint_id, uint32_t cluster_id, uint32_t attribute_id, esp_matter_attr_val_t *val);
 esp_err_t sensor_attribute_update_cb(esp_matter::attribute::callback_type_t type, uint16_t endpoint_id, uint32_t cluster_id, uint32_t attribute_id, esp_matter_attr_val_t *val, void *priv_data);
 

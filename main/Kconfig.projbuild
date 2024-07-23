@@ -1,32 +1,42 @@
-menu "Example Configuration"
-    visible if CUSTOM_COMMISSIONABLE_DATA_PROVIDER
-
-    config DYNAMIC_PASSCODE_COMMISSIONABLE_DATA_PROVIDER
-        bool "Enable Dynamic Passcode Commissionable Data Provider"
-        depends on CUSTOM_COMMISSIONABLE_DATA_PROVIDER
-        default y
-
-    config DYNAMIC_PASSCODE_PROVIDER_DISCRIMINATOR
-        int "Discriminator in Dynamic Passcode Commissionable Data Provider"
-        depends on DYNAMIC_PASSCODE_COMMISSIONABLE_DATA_PROVIDER
-        default 3840
-        range 0 4095
+menu "GPIO Configuration"
+    config SWITCH_1
+        int "GPIO Pin for switch 1"
+        default 13
         help
-            Fixed discriminator in custom dynamic passcode commissionable data provider
-
-    config DYNAMIC_PASSCODE_PROVIDER_ITERATIONS
-        int "Iterations in Dynamic Passcode Commissionable Data Provider"
-        depends on DYNAMIC_PASSCODE_COMMISSIONABLE_DATA_PROVIDER
-        default 10000
-        range 1000 100000
+            The GPIO pin number for the switch 1. Default is 13.
+    config SWITCH_2
+        int "GPIO Pin for switch 2"
+        default 14
         help
-            Fixed iterations in custom dynamic passcode commissionable data provider
-
-    config DYNAMIC_PASSCODE_PROVIDER_SALT_BASE64
-        string "Base64-Encoded Salt in Dynamic Passcode Commissionable Data Provider"
-        depends on DYNAMIC_PASSCODE_COMMISSIONABLE_DATA_PROVIDER
-        default "0NHS09TV1tfY2drb3N3e36ChoqOkpaanqKmqq6ytrq8="
+            The GPIO pin number for the switch 2. Default is 14.
+    config SWITCH_3
+        int "GPIO Pin for switch 3"
+        default 0
         help
-            Fixed salt in custom dynamic passcode commissionable data provider. It should be a Base64-Encoded string.
-
+            The GPIO pin number for the switch 3. Default is 0 as in not set.
+    config SWITCH_4
+        int "GPIO Pin for switch 4"
+        default 0
+        help
+            The GPIO pin number for the switch 4. Default is 0 as in not set.
+    config SWITCH_5
+        int "GPIO Pin for switch 5"
+        default 0
+        help
+            The GPIO pin number for the switch 5. Default is 0 as in not set.
+    config SWITCH_6
+        int "GPIO Pin for switch 6"
+        default 0
+        help
+            The GPIO pin number for the switch 6. Default is 0 as in not set.
+    config SWITCH_7
+        int "GPIO Pin for switch 7"
+        default 0
+        help
+            The GPIO pin number for the switch 7. Default is 0 as in not set.
+    config SWITCH_8
+        int "GPIO Pin for switch 8"
+        default 0
+        help
+            The GPIO pin number for the switch 8. Default is 0 as in not set.
 endmenu
