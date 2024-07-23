@@ -91,7 +91,6 @@ extern "C" void app_main() {
     if (CONFIG_SWITCH_7 != 0) create_plug(CONFIG_SWITCH_7, node);
     if (CONFIG_SWITCH_8 != 0) create_plug(CONFIG_SWITCH_8, node);
 
-
     #if CHIP_DEVICE_CONFIG_ENABLE_THREAD
         // Set OpenThread platform config
         esp_openthread_platform_config_t config = {

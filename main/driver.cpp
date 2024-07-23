@@ -30,6 +30,39 @@ static void driver_button_toggle_cb(void *arg, void *data) {
     ESP_LOGI(TAG, "Toggle button pressed");
 }
 
+
+esp_err_t driver_attribute_update(driver_handle driver_handle, uint16_t endpoint_id, uint32_t cluster_id, uint32_t attribute_id, esp_matter_attr_val_t *val) {
+    esp_err_t err = ESP_OK;
+    if (cluster_id == OnOff::Id) {
+        if (attribute_id == OnOff::Attributes::OnOff::Id) {
+           int gpio_index = get_gpio_index(endpoint_id);
+           if (gpio_index != -1){
+                int GPIO_PIN = plug_unit_list[gpio_index].gpio_pin;
+                ESP_LOGI(TAG, "Toggling GPIO: %d, Val : %d", GPIO_PIN, val->val.b);
+                gpio_set_level((gpio_num_t)GPIO_PIN, !val->val.b);
+           } 
+        }
+    }
+    return err;
+}
+esp_err_t driver_plug_unit_set_defaults(uint16_t endpoint_id, int gpio_pin) {
+    esp_err_t err = ESP_OK;
+    if ((gpio_num_t)gpio_pin != GPIO_NUM_NC){
+        node_t *node = node::get();
+        endpoint_t *endpoint = endpoint::get(node, endpoint_id);
+        cluster_t *cluster = cluster::get(endpoint, OnOff::Id);
+        attribute_t *attribute = attribute::get(cluster, OnOff::Attributes::OnOff::Id);
+
+        attribute::set_deferred_persistence(attribute);
+
+        esp_matter_attr_val_t val = esp_matter_invalid(NULL);
+        attribute::get_val(attribute, &val);
+
+        err |= gpio_set_level((gpio_num_t)gpio_pin, !val.val.b);
+    } 
+
+    return err;
+}
 esp_err_t create_plug(int gpio_pin, node_t* node) {
     esp_err_t err = ESP_OK;
     driver_handle handle = switch_init(gpio_pin);
@@ -37,7 +70,11 @@ esp_err_t create_plug(int gpio_pin, node_t* node) {
     config.on_off.on_off = DEFAULT_POWER;
     config.on_off.lighting.start_up_on_off = nullptr;
     endpoint_t *endpoint = on_off_plugin_unit::create(node, &config, ENDPOINT_FLAG_NONE, handle);
-    ESP_LOGE(TAG, "Failed to create switch endpoint for %d", gpio_pin);
+    if (!endpoint) {
+        ESP_LOGE(TAG, "Failed to create switch endpoint for %d", gpio_pin);
+        err = ESP_FAIL;
+        return err;
+    }
 
     for (int i = 0; i < configured_plugs; i++) {
         if (plug_unit_list[i].gpio_pin == gpio_pin) {
@@ -49,7 +86,7 @@ esp_err_t create_plug(int gpio_pin, node_t* node) {
     if (configured_plugs < MAX_CONFIGURABLE_PLUGS) {
         plug_unit_list[configured_plugs].gpio_pin = gpio_pin;
         plug_unit_list[configured_plugs].endpoint_id = endpoint::get_id(endpoint);
-        // app_driver_plugin_unit_set_defaults(endpoint::get_id(endpoint), plug);
+        driver_plug_unit_set_defaults(endpoint::get_id(endpoint), gpio_pin);
         configured_plugs++;
     } else {
         ESP_LOGI(TAG, "Cannot configure more plugs");
@@ -64,20 +101,6 @@ esp_err_t create_plug(int gpio_pin, node_t* node) {
 
     cluster::fixed_label::config_t fl_config;
     cluster::fixed_label::create(endpoint, &fl_config, CLUSTER_FLAG_SERVER);
-    return err;
-}
-esp_err_t driver_attribute_update(driver_handle driver_handle, uint16_t endpoint_id, uint32_t cluster_id, uint32_t attribute_id, esp_matter_attr_val_t *val) {
-    esp_err_t err = ESP_OK;
-    if (cluster_id == OnOff::Id) {
-        if (attribute_id == OnOff::Attributes::OnOff::Id) {
-           int gpio_index = get_gpio_index(endpoint_id);
-           if (gpio_index != -1){
-                int GPIO_PIN = plug_unit_list[gpio_index].gpio_pin;
-                ESP_LOGI(TAG, "Toggling GPIO: %d, Val : %d", GPIO_PIN, val->val.b);
-                gpio_set_level((gpio_num_t)GPIO_PIN, !val->val.b);
-           } 
-        }
-    }
     return err;
 }
 

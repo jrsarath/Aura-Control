@@ -35,7 +35,6 @@ driver_handle switch_init(int gpio_pin);
  */
 driver_handle driver_button_init();
 
-
 /** 
  * Driver Update
  * This API should be called to update the driver for the attribute being updated.
