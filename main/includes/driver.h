@@ -16,8 +16,21 @@ using namespace esp_matter;
 extern "C" {
 #endif
 
+typedef struct {
+    int gpio_pin;
+    uint16_t endpoint_id;
+} gpio_isr_data_t;
+
 typedef void *driver_handle;
 
+/** 
+ * Initialize the input Switch driver
+ * This initializes the input switch driver associated with the selected board.
+ *
+ * @return Handle on success.
+ * @return NULL in case of failure.
+ */
+driver_handle input_switch_init(int gpio_pin, uint16_t endpoint_id);
 /** 
  * Initialize the Switch driver
  * This initializes the switch driver associated with the selected board.
@@ -48,9 +61,9 @@ driver_handle driver_button_init();
  * @return ESP_OK on success.
  * @return error in case of failure.
  */
+esp_err_t driver_attribute_update(driver_handle driver_handle, uint16_t endpoint_id, uint32_t cluster_id, uint32_t attribute_id, esp_matter_attr_val_t *val);
 
 esp_err_t create_plug(int gpio_pin, node_t* node);
-esp_err_t driver_attribute_update(driver_handle driver_handle, uint16_t endpoint_id, uint32_t cluster_id, uint32_t attribute_id, esp_matter_attr_val_t *val);
 esp_err_t sensor_attribute_update_cb(esp_matter::attribute::callback_type_t type, uint16_t endpoint_id, uint32_t cluster_id, uint32_t attribute_id, esp_matter_attr_val_t *val, void *priv_data);
 
 #if CHIP_DEVICE_CONFIG_ENABLE_THREAD

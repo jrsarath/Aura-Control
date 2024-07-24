@@ -16,6 +16,7 @@ struct plug_unit_endpoint {
 
 #define MAX_CONFIGURABLE_PLUGS 8
 #define DEFAULT_POWER false
+#define DEBOUNCE_DELAY_MS 1000
 
 #ifdef __cplusplus
 }
