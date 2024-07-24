@@ -30,4 +30,4 @@ This project involves a custom PCB that integrates an 8-channel relay system wit
 
 <br />
 <br />
-Made in kolkata with ❤️ 
+Made in Kolkata with ❤️ 
