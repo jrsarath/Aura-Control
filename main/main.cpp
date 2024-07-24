@@ -84,7 +84,13 @@ extern "C" void app_main() {
     // Setup Switches
     for (int i = 0; i < sizeof(outputPins) / sizeof(outputPins[0]); ++i) {
         if (outputPins[i] > 0) {
-            create_plug(outputPins[i], node);
+            plug_unit_endpoint plug = create_plug(outputPins[i], node);
+            if (plug.endpoint_id != -1) {
+                int inputPin = find_input_pin_by_output_pin(plug.gpio_pin);
+                if (inputPin > 0) {
+                    input_switch_init(inputPin, plug.endpoint_id);
+                }
+            }
         }
     }
 

@@ -7,9 +7,6 @@
 #include <inttypes.h>
 #include <iot_button.h>
 #include <driver/gpio.h>
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "freertos/queue.h"
 
 #include "includes/variables.h"
 #include "includes/driver.h"
@@ -22,11 +19,8 @@ using namespace chip::app::Clusters;
 static const char *TAG = "driver";
 static uint16_t configured_plugs = 0;
 static plug_unit_endpoint plug_unit_list[MAX_CONFIGURABLE_PLUGS];
-static bool button_was_pressed[MAX_CONFIGURABLE_PLUGS] = {false};
-static bool button_is_pressed[MAX_CONFIGURABLE_PLUGS] = {false};
-static QueueHandle_t gpio_evt_queue = NULL;
 
-static int find_input_pin_by_output_pin(int outputPin) {
+int find_input_pin_by_output_pin(int outputPin) {
     for (int i = 0; i < sizeof(outputPins) / sizeof(outputPins[0]); ++i) {
         if (outputPins[i] == outputPin) {
             return inputPins[i];
@@ -37,14 +31,6 @@ static int find_input_pin_by_output_pin(int outputPin) {
 static int get_gpio_index_by_endpoint(uint16_t endpoint_id) {
     for(int i = 0; i < configured_plugs; i++) {
         if (plug_unit_list[i].endpoint_id == endpoint_id) {
-            return i;
-        }
-    }
-    return -1;
-}
-static int get_gpio_index_by_gpio_pin(int pin) {
-    for(int i = 0; i < configured_plugs; i++) {
-        if (plug_unit_list[i].gpio_pin == pin) {
             return i;
         }
     }
@@ -66,56 +52,6 @@ static void driver_input_button_toggle_cb(void *arg, void *data) {
     attribute::get_val(attribute, &val);
     val.val.b = !val.val.b;
     attribute::update(callback_data->endpoint_id, cluster::get_id(cluster), attribute::get_id(attribute), &val);
-}
-static void update_switch_value_from_input(int gpio_pin, uint16_t endpoint_id) {
-    int gpio_index = get_gpio_index_by_endpoint(endpoint_id);
-    if (gpio_index != -1){
-        node_t *node = node::get();
-        endpoint_t *endpoint = endpoint::get(node, endpoint_id);
-        cluster_t *cluster = cluster::get(endpoint, OnOff::Id);
-        attribute_t *attribute = attribute::get(cluster, OnOff::Attributes::OnOff::Id);
-
-        esp_matter_attr_val_t val = esp_matter_invalid(NULL);
-        attribute::get_val(attribute, &val);
-
-        ESP_LOGI(TAG, "value %d, gpio %d", !val.val.b, gpio_pin);
-
-        esp_matter_attr_val_t endpoint_value;    
-        endpoint_value.type = esp_matter_val_type_t::ESP_MATTER_VAL_TYPE_BOOLEAN;
-        endpoint_value.val.b = !val.val.b;
-
-        attribute::update(endpoint_id, OnOff::Id, OnOff::Attributes::OnOff::Id, &endpoint_value);
-        // attribute::set_val(attribute, &endpoint_value);
-        gpio_set_level((gpio_num_t)gpio_pin, val.val.b);
-    }
-}
-static void IRAM_ATTR input_isr_handler(void *arg) {
-    gpio_isr_data_t *isr_data = (gpio_isr_data_t *)arg;
-    int gpio_pin = isr_data->gpio_pin;
-    int endpoint_id = isr_data->endpoint_id;
-
-    int index = get_gpio_index_by_endpoint(gpio_pin);
-    if (index != -1) {
-        button_is_pressed[index] = gpio_get_level((gpio_num_t)gpio_pin) == 0;
-        if (button_is_pressed[index] != button_was_pressed[index]) {
-            gpio_isr_data_t evt;
-            evt.gpio_pin = gpio_pin;
-            evt.endpoint_id = endpoint_id;
-            xQueueSendFromISR(gpio_evt_queue, &evt, NULL);
-            button_was_pressed[index] = button_is_pressed[index];
-        }
-    }
-}
-static void gpio_task(void *arg) {
-    gpio_isr_data_t evt;
-    while (1) {
-        if (xQueueReceive(gpio_evt_queue, &evt, portMAX_DELAY)) {
-            int gpio_index = get_gpio_index_by_endpoint(evt.endpoint_id);
-            if (gpio_index != -1) {
-                update_switch_value_from_input(evt.gpio_pin, evt.endpoint_id);
-            }
-        }
-    }
 }
 
 
@@ -151,8 +87,8 @@ esp_err_t driver_plug_unit_set_defaults(uint16_t endpoint_id, int gpio_pin) {
 
     return err;
 }
-esp_err_t create_plug(int gpio_pin, node_t* node) {
-    esp_err_t err = ESP_OK;
+plug_unit_endpoint create_plug(int gpio_pin, node_t* node) {
+    plug_unit_endpoint switch_details;
     driver_handle handle = switch_init(gpio_pin);
     on_off_plugin_unit::config_t config;
     config.on_off.on_off = DEFAULT_POWER;
@@ -160,14 +96,17 @@ esp_err_t create_plug(int gpio_pin, node_t* node) {
     endpoint_t *endpoint = on_off_plugin_unit::create(node, &config, ENDPOINT_FLAG_NONE, handle);
     if (!endpoint) {
         ESP_LOGE(TAG, "Failed to create switch endpoint for %d", gpio_pin);
-        err = ESP_FAIL;
-        return err;
+        switch_details.endpoint_id = -1;
+        switch_details.gpio_pin = -1;
+        return switch_details;
     }
 
     for (int i = 0; i < configured_plugs; i++) {
         if (plug_unit_list[i].gpio_pin == gpio_pin) {
             ESP_LOGI(TAG, "Switch already configured: %d", endpoint::get_id(endpoint));
-            return ESP_OK;
+            switch_details.endpoint_id = endpoint::get_id(endpoint);
+            switch_details.gpio_pin = gpio_pin;
+            return switch_details;
         }
     }
 
@@ -178,8 +117,9 @@ esp_err_t create_plug(int gpio_pin, node_t* node) {
         configured_plugs++;
     } else {
         ESP_LOGI(TAG, "Cannot configure more plugs");
-        err = ESP_FAIL;
-        return err;
+        switch_details.endpoint_id = -1;
+        switch_details.gpio_pin = -1;
+        return switch_details;
     }
 
 
@@ -190,26 +130,9 @@ esp_err_t create_plug(int gpio_pin, node_t* node) {
     cluster::fixed_label::config_t fl_config;
     cluster::fixed_label::create(endpoint, &fl_config, CLUSTER_FLAG_SERVER);
 
-    // static one input
-    int inputPin = find_input_pin_by_output_pin(gpio_pin);
-    if (inputPin > 0) {
-        input_switch_init(inputPin, plug_endpoint_id);
-        // gpio_set_intr_type((gpio_num_t)inputPin, GPIO_INTR_NEGEDGE);
-        // gpio_install_isr_service(0);
-
-        // gpio_isr_data_t* isr_data = (gpio_isr_data_t*) malloc(sizeof(gpio_isr_data_t));
-        // if (isr_data == NULL) {
-        //     ESP_LOGE(TAG, "Failed to allocate memory for ISR data");
-        //     return ESP_ERR_NO_MEM;
-        // }
-        // isr_data->gpio_pin = gpio_pin;
-        // isr_data->endpoint_id = plug_endpoint_id;
-
-        // // gpio_isr_handler_add(GPIO_NUM_27, input_isr_handler, (void*) isr_data);
-        // // gpio_evt_queue = xQueueCreate(10, sizeof(gpio_isr_data_t));
-        // // xTaskCreate(gpio_task, "gpio_task", 4096, NULL, 10, NULL);
-    }
-    return err;
+    switch_details.endpoint_id = plug_endpoint_id;
+    switch_details.gpio_pin = gpio_pin;
+    return switch_details;
 }
 
 driver_handle switch_init(int gpio_pin) {
@@ -230,7 +153,8 @@ driver_handle input_switch_init(int gpio_pin, uint16_t endpoint_id) {
     plug_unit_endpoint* callback_data = (plug_unit_endpoint*)malloc(sizeof(plug_unit_endpoint));
     callback_data->endpoint_id = endpoint_id;
     callback_data->gpio_pin = gpio_pin;
-    iot_button_register_cb((button_handle_t)handle, BUTTON_PRESS_DOWN, driver_input_button_toggle_cb, &callback_data);
+    ESP_LOGI(TAG, "endpoint_id %d", (int)endpoint_id);
+    iot_button_register_cb((button_handle_t)handle, BUTTON_PRESS_DOWN, driver_input_button_toggle_cb, callback_data);
 
     gpio_set_direction((gpio_num_t)gpio_pin, GPIO_MODE_INPUT);
     gpio_set_pull_mode((gpio_num_t)gpio_pin, GPIO_PULLUP_ONLY);
