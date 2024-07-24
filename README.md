@@ -1,4 +1,5 @@
-![Aura + Matter](assets/aura-matter.svg)
+<img src="assets/aura-matter.svg" width="100%" />
+
 # Aura Control
 A straightforward firmware utilizing the esp-matter SDK to develop a Matter-enabled 8-channel relay with support for external inputs.
 The Firmware provides flexible design to easily enable/disable & configure available channels based on your requirements.
