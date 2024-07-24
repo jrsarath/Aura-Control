@@ -371,17 +371,65 @@ CONFIG_PARTITION_TABLE_MD5=y
 # end of Partition Table
 
 #
-# GPIO Configuration
+# Switch Configuration
 #
-CONFIG_SWITCH_1=13
-CONFIG_SWITCH_2=14
-CONFIG_SWITCH_3=0
-CONFIG_SWITCH_4=0
-CONFIG_SWITCH_5=0
-CONFIG_SWITCH_6=0
-CONFIG_SWITCH_7=0
-CONFIG_SWITCH_8=0
-# end of GPIO Configuration
+
+#
+# Switch 1
+#
+CONFIG_SWITCH_1_INPUT_PIN=27
+CONFIG_SWITCH_1_OUTPUT_PIN=13
+# end of Switch 1
+
+#
+# Switch 2
+#
+CONFIG_SWITCH_2_INPUT_PIN=26
+CONFIG_SWITCH_2_OUTPUT_PIN=14
+# end of Switch 2
+
+#
+# Switch 3
+#
+CONFIG_SWITCH_3_INPUT_PIN=0
+CONFIG_SWITCH_3_OUTPUT_PIN=0
+# end of Switch 3
+
+#
+# Switch 4
+#
+CONFIG_SWITCH_4_INPUT_PIN=0
+CONFIG_SWITCH_4_OUTPUT_PIN=0
+# end of Switch 4
+
+#
+# Switch 5
+#
+CONFIG_SWITCH_5_INPUT_PIN=0
+CONFIG_SWITCH_5_OUTPUT_PIN=0
+# end of Switch 5
+
+#
+# Switch 6
+#
+CONFIG_SWITCH_6_INPUT_PIN=0
+CONFIG_SWITCH_6_OUTPUT_PIN=0
+# end of Switch 6
+
+#
+# Switch 7
+#
+CONFIG_SWITCH_7_INPUT_PIN=0
+CONFIG_SWITCH_7_OUTPUT_PIN=0
+# end of Switch 7
+
+#
+# Switch 8
+#
+CONFIG_SWITCH_8_INPUT_PIN=0
+CONFIG_SWITCH_8_OUTPUT_PIN=0
+# end of Switch 8
+# end of Switch Configuration
 
 #
 # Compiler options

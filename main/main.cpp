@@ -82,14 +82,11 @@ extern "C" void app_main() {
     ABORT_APP_ON_FAILURE(node != nullptr, ESP_LOGE(TAG, "Failed to create Matter node"));
 
     // Setup Switches
-    if (CONFIG_SWITCH_1 != 0) create_plug(CONFIG_SWITCH_1, node);
-    if (CONFIG_SWITCH_2 != 0) create_plug(CONFIG_SWITCH_2, node);
-    if (CONFIG_SWITCH_3 != 0) create_plug(CONFIG_SWITCH_3, node);
-    if (CONFIG_SWITCH_4 != 0) create_plug(CONFIG_SWITCH_4, node);
-    if (CONFIG_SWITCH_5 != 0) create_plug(CONFIG_SWITCH_5, node);
-    if (CONFIG_SWITCH_6 != 0) create_plug(CONFIG_SWITCH_6, node);
-    if (CONFIG_SWITCH_7 != 0) create_plug(CONFIG_SWITCH_7, node);
-    if (CONFIG_SWITCH_8 != 0) create_plug(CONFIG_SWITCH_8, node);
+    for (int i = 0; i < sizeof(outputPins) / sizeof(outputPins[0]); ++i) {
+        if (outputPins[i] > 0) {
+            create_plug(outputPins[i], node);
+        }
+    }
 
     #if CHIP_DEVICE_CONFIG_ENABLE_THREAD
         // Set OpenThread platform config
