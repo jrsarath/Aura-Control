@@ -18,7 +18,7 @@ Steps
 
 ## Demo device
 This project involves a custom PCB that integrates an 8-channel relay system with connectivity for external input switches, with a Hi-Link converter to run the device from AC. The board is powered by an ESP32 Devkit.
-- [PCB Schema](https://365.altium.com/files/E2252F43-3197-4BE0-AAA4-C608606C2910)
+- [PCB Schema](https://365.altium.com/files/C64237F8-63B1-4CE4-85EA-31C3FFC568F1)
 - [Demo Device](device.jpg)
 
 ## Other firmwares
