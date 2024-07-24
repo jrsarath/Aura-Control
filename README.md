@@ -1,4 +1,4 @@
-![Matter](https://csa-iot.org/wp-content/uploads/2022/09/matter_lkup_rgb_night-scaled.jpg)
+![Aura + Matter](assets/aura-matter.svg)
 # Aura Control
 A straightforward firmware utilizing the esp-matter SDK to develop a Matter-enabled 8-channel relay with support for external inputs.
 The Firmware provides flexible design to easily enable/disable & configure available channels based on your requirements.
@@ -19,7 +19,7 @@ Steps
 ## Demo device
 This project involves a custom PCB that integrates an 8-channel relay system with connectivity for external input switches, with a Hi-Link converter to run the device from AC. The board is powered by an ESP32 Devkit.
 - [PCB Schema](https://365.altium.com/files/C64237F8-63B1-4CE4-85EA-31C3FFC568F1)
-- [Demo Device](device.jpg)
+- [Demo Device](assets/device.jpg)
 
 ## Other firmwares
 - [Aura Climate](https://github.com/jrsarath/aura-climate)
