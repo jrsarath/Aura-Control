@@ -2,97 +2,102 @@ menu "Switch Configuration"
     menu "Switch 1"
         config SWITCH_1_INPUT_PIN
             int "GPIO Pin for switch 1 input"
-            default 27
+            default 4
             help
                 The GPIO pin number for the input of switch 1. Default is 27.
         config SWITCH_1_OUTPUT_PIN
             int "GPIO Pin for switch 1 output"
-            default 13
+            default 33
             help
                 The GPIO pin number for the output of switch 1. Default is 13.
     endmenu
     menu "Switch 2"
         config SWITCH_2_INPUT_PIN
             int "GPIO Pin for switch 1 input"
-            default 26
+            default 16
             help
                 The GPIO pin number for the input of switch 2. Default is 26.
         config SWITCH_2_OUTPUT_PIN
             int "GPIO Pin for switch 1 output"
-            default 14
+            default 32
             help
                 The GPIO pin number for the output of switch 2. Default is 13.
     endmenu
     menu "Switch 3"
         config SWITCH_3_INPUT_PIN
             int "GPIO Pin for switch 3 input"
-            default 0
+            default 17
             help
                 The GPIO pin number for the input of switch 3. Default is 0 as in not set.
         config SWITCH_3_OUTPUT_PIN
             int "GPIO Pin for switch 3 output"
-            default 0
+            default 15
             help
                 The GPIO pin number for the output of switch 3. Default is 0 as in not set.
     endmenu
     menu "Switch 4"
         config SWITCH_4_INPUT_PIN
             int "GPIO Pin for switch 4 input"
-            default 0
+            default 18
             help
                 The GPIO pin number for the input of switch 4. Default is 0 as in not set.
         config SWITCH_4_OUTPUT_PIN
             int "GPIO Pin for switch 4 output"
-            default 0
+            default 25
             help
                 The GPIO pin number for the output of switch 4. Default is 0 as in not set.
     endmenu
     menu "Switch 5"
         config SWITCH_5_INPUT_PIN
             int "GPIO Pin for switch 5 input"
-            default 0
+            default 19
             help
                 The GPIO pin number for the input of switch 5. Default is 0 as in not set.
         config SWITCH_5_OUTPUT_PIN
             int "GPIO Pin for switch 5 output"
-            default 0
+            default 26
             help
                 The GPIO pin number for the output of switch 5. Default is 0 as in not set.
     endmenu
     menu "Switch 6"
         config SWITCH_6_INPUT_PIN
             int "GPIO Pin for switch 6 input"
-            default 0
+            default 21
             help
                 The GPIO pin number for the input of switch 6. Default is 0 as in not set.
         config SWITCH_6_OUTPUT_PIN
             int "GPIO Pin for switch 6 output"
-            default 0
+            default 27
             help
                 The GPIO pin number for the output of switch 6. Default is 0 as in not set.
     endmenu
     menu "Switch 7"
         config SWITCH_7_INPUT_PIN
             int "GPIO Pin for switch 7 input"
-            default 0
+            default 22
             help
                 The GPIO pin number for the input of switch 7. Default is 0 as in not set.
         config SWITCH_7_OUTPUT_PIN
             int "GPIO Pin for switch 7 output"
-            default 0
+            default 14
             help
                 The GPIO pin number for the output of switch 7. Default is 0 as in not set.
     endmenu
     menu "Switch 8"
         config SWITCH_8_INPUT_PIN
             int "GPIO Pin for switch 8 input"
-            default 0
+            default 23
             help
                 The GPIO pin number for the input of switch 8. Default is 0 as in not set.
         config SWITCH_8_OUTPUT_PIN
             int "GPIO Pin for switch 8 output"
-            default 0
+            default 13
             help
                 The GPIO pin number for the output of switch 8. Default is 0 as in not set.
     endmenu
+    config GPIO_INDICATOR_LED
+        int "GPIO Pin for Indicator LED"
+        default 2
+        help
+            The GPIO pin number for inbuilt led/indicator led.
 endmenu

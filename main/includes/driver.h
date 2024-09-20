@@ -50,6 +50,10 @@ driver_handle switch_init(int gpio_pin);
  */
 driver_handle driver_button_init();
 
+void device_identifier_cb();
+void device_commission_window_open_cb();
+void device_commission_window_close_cb();
+
 /** 
  * Driver Update
  * This API should be called to update the driver for the attribute being updated.
