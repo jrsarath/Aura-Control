@@ -1,0 +1,19 @@
+key,type,encoding,value
+chip-factory,namespace,,
+discriminator,data,u32,3489
+iteration-count,data,u32,10000
+salt,data,string,sj+3rEgQFO+usTwcFQNlUtF8f17mP8UM+i3H/hE9gx0=
+vendor-id,data,u32,72
+vendor-name,data,string,48 Lab
+product-id,data,u32,8192
+product-name,data,string,Aura Control
+hardware-ver,data,u32,2
+hw-ver-str,data,string,v2.0
+mfg-date,data,string,2024-09-01
+serial-num,data,string,CT-0002
+dac-cert,file,binary,/Users/jrsarath/Documents/GitHub/Aura-Control/out/48_2000/19252e7a-fc0d-4b7c-a148-3f76e5e8274d/internal/DAC_cert.der
+dac-key,file,binary,/Users/jrsarath/Documents/GitHub/Aura-Control/out/48_2000/19252e7a-fc0d-4b7c-a148-3f76e5e8274d/internal/DAC_private_key.bin
+dac-pub-key,file,binary,/Users/jrsarath/Documents/GitHub/Aura-Control/out/48_2000/19252e7a-fc0d-4b7c-a148-3f76e5e8274d/internal/DAC_public_key.bin
+pai-cert,file,binary,/Users/jrsarath/Documents/GitHub/Aura-Control/out/48_2000/staging/pai_cert.der
+verifier,data,string,5ILIo1F4nYiRpjnODlVK3lcqnqstdGaZbMTNAovOZBMENwDAqEc9eT+lFDfYD5/3u09r/QdCMu76ZNPsQjS/reiVHqM44FE1oJLYt2T9xBzsMc8ibPFcua9ulcxL2E/Few==
+cert-dclrn,file,binary,../../../.espressif/esp-matter/connectedhomeip/connectedhomeip/credentials/test/certification-declaration/Chip-Test-CD-0x0048-0x2000.der
