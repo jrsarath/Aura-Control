@@ -74,13 +74,34 @@ static esp_err_t app_attribute_update_cb(callback_type_t type, uint16_t endpoint
 
 extern "C" void app_main() {
     esp_err_t err = ESP_OK;
-    nvs_flash_init();
+    
+    // Initialize NVS
+    err = nvs_flash_init();
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to initialize NVS: %d", err);
+        return;
+    }
+
+    // Initialize driver
+    err = driver_init();
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to initialize driver: %d", err);
+        return;
+    }
+
     driver_handle button_handle = driver_button_init();
+    if (!button_handle) {
+        ESP_LOGE(TAG, "Failed to initialize button");
+        return;
+    }
     app_reset_button_register(button_handle);
 
     node::config_t node_config;
     node_t *node = node::create(&node_config, app_attribute_update_cb, app_identification_cb);
-    ABORT_APP_ON_FAILURE(node != nullptr, ESP_LOGE(TAG, "Failed to create Matter node"));
+    if (!node) {
+        ESP_LOGE(TAG, "Failed to create Matter node");
+        return;
+    }
 
     // Setup Switches
     for (int i = 0; i < sizeof(outputPins) / sizeof(outputPins[0]); ++i) {
@@ -89,8 +110,12 @@ extern "C" void app_main() {
             if (plug.endpoint_id != -1) {
                 int inputPin = find_input_pin_by_output_pin(plug.gpio_pin);
                 if (inputPin > 0) {
-                    input_switch_init(inputPin, plug.endpoint_id);
+                    if (!input_switch_init(inputPin, plug.endpoint_id)) {
+                        ESP_LOGW(TAG, "Failed to initialize input switch for pin %d", inputPin);
+                    }
                 }
+            } else {
+                ESP_LOGW(TAG, "Failed to create plug for pin %d", outputPins[i]);
             }
         }
     }

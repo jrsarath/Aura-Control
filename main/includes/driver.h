@@ -23,57 +23,30 @@ typedef struct {
 
 typedef void *driver_handle;
 
-/** 
- * Initialize the input Switch driver
- * This initializes the input switch driver associated with the selected board.
- *
- * @return Handle on success.
- * @return NULL in case of failure.
- */
-driver_handle input_switch_init(int gpio_pin, uint16_t endpoint_id);
+typedef struct {
+    int gpio_pin;
+    uint16_t endpoint_id;
+} plug_unit_endpoint;
 
-/** 
- * Initialize the Switch driver
- * This initializes the switch driver associated with the selected board.
- *
- * @return Handle on success.
- * @return NULL in case of failure.
- */
+// State management
+esp_err_t driver_init(void);
+esp_err_t driver_deinit(void);
+
+// Plug unit management
+plug_unit_endpoint create_plug(int gpio_pin, esp_matter::node_t* node);
+esp_err_t delete_plug(uint16_t endpoint_id);
+esp_err_t get_plug_state(uint16_t endpoint_id, bool* state);
+
+// GPIO management
 driver_handle switch_init(int gpio_pin);
+driver_handle input_switch_init(int gpio_pin, uint16_t endpoint_id);
+driver_handle driver_button_init(void);
 
-/** 
- * Initialize the button driver
- * This initializes the button driver associated with the selected board.
- *
- * @return Handle on success.
- * @return NULL in case of failure.
- */
-driver_handle driver_button_init();
-
-void device_identifier_cb();
-void device_commission_window_open_cb();
-void device_commission_window_close_cb();
-
-/** 
- * Driver Update
- * This API should be called to update the driver for the attribute being updated.
- * This is usually called from the common `app_attribute_update_cb()`.
- *
- * @param[in] endpoint_id Endpoint ID of the attribute.
- * @param[in] cluster_id Cluster ID of the attribute.
- * @param[in] attribute_id Attribute ID of the attribute.
- * @param[in] val Pointer to `esp_matter_attr_val_t`. Use appropriate elements as per the value type.
- *
- * @return ESP_OK on success.
- * @return error in case of failure.
- */
+// Callbacks
 esp_err_t driver_attribute_update(driver_handle driver_handle, uint16_t endpoint_id, uint32_t cluster_id, uint32_t attribute_id, esp_matter_attr_val_t *val);
-
-/**
- * Creates a switch
- * @return plug_unit_endpoint
- */
-plug_unit_endpoint create_plug(int gpio_pin, node_t* node);
+void device_identifier_cb(void);
+void device_commission_window_open_cb(void);
+void device_commission_window_close_cb(void);
 
 /**
  * Sensort attribute update callback

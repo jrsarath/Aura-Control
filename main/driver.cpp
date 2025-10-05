@@ -7,6 +7,8 @@
 #include <inttypes.h>
 #include <iot_button.h>
 #include <driver/gpio.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
 
 #include "includes/variables.h"
 #include "includes/driver.h"
@@ -19,6 +21,7 @@ using namespace chip::app::Clusters;
 static const char *TAG = "driver";
 static uint16_t configured_plugs = 0;
 static plug_unit_endpoint plug_unit_list[MAX_CONFIGURABLE_PLUGS];
+static SemaphoreHandle_t plug_mutex = NULL;
 
 int find_input_pin_by_output_pin(int outputPin) {
     for (int i = 0; i < sizeof(outputPins) / sizeof(outputPins[0]); ++i) {
@@ -87,80 +90,203 @@ esp_err_t driver_plug_unit_set_defaults(uint16_t endpoint_id, int gpio_pin) {
 
     return err;
 }
+
+esp_err_t driver_init(void) {
+    if (plug_mutex == NULL) {
+        plug_mutex = xSemaphoreCreateMutex();
+        if (plug_mutex == NULL) {
+            ESP_LOGE(TAG, "Failed to create mutex");
+            return ESP_ERR_NO_MEM;
+        }
+    }
+    configured_plugs = 0;
+    memset(plug_unit_list, 0, sizeof(plug_unit_list));
+    return ESP_OK;
+}
+
+esp_err_t driver_deinit(void) {
+    if (plug_mutex) {
+        vSemaphoreDelete(plug_mutex);
+        plug_mutex = NULL;
+    }
+    return ESP_OK;
+}
+
+static esp_err_t add_plug_to_list(plug_unit_endpoint* plug) {
+    esp_err_t ret = ESP_ERR_NO_MEM;
+    
+    if (xSemaphoreTake(plug_mutex, portMAX_DELAY) == pdTRUE) {
+        if (configured_plugs < MAX_CONFIGURABLE_PLUGS) {
+            memcpy(&plug_unit_list[configured_plugs], plug, sizeof(plug_unit_endpoint));
+            configured_plugs++;
+            ret = ESP_OK;
+        }
+        xSemaphoreGive(plug_mutex);
+    }
+    return ret;
+}
+
+esp_err_t delete_plug(uint16_t endpoint_id) {
+    esp_err_t ret = ESP_ERR_NOT_FOUND;
+    
+    if (xSemaphoreTake(plug_mutex, portMAX_DELAY) == pdTRUE) {
+        for (int i = 0; i < configured_plugs; i++) {
+            if (plug_unit_list[i].endpoint_id == endpoint_id) {
+                // Shift remaining elements
+                for (int j = i; j < configured_plugs - 1; j++) {
+                    memcpy(&plug_unit_list[j], &plug_unit_list[j + 1], sizeof(plug_unit_endpoint));
+                }
+                configured_plugs--;
+                ret = ESP_OK;
+                break;
+            }
+        }
+        xSemaphoreGive(plug_mutex);
+    }
+    return ret;
+}
+
+esp_err_t get_plug_state(uint16_t endpoint_id, bool* state) {
+    esp_err_t ret = ESP_ERR_NOT_FOUND;
+    
+    if (xSemaphoreTake(plug_mutex, portMAX_DELAY) == pdTRUE) {
+        int gpio_index = get_gpio_index_by_endpoint(endpoint_id);
+        if (gpio_index != -1) {
+            int gpio_pin = plug_unit_list[gpio_index].gpio_pin;
+            *state = gpio_get_level((gpio_num_t)gpio_pin);
+            ret = ESP_OK;
+        }
+        xSemaphoreGive(plug_mutex);
+    }
+    return ret;
+}
+
 plug_unit_endpoint create_plug(int gpio_pin, node_t* node) {
-    plug_unit_endpoint switch_details;
+    plug_unit_endpoint switch_details = {-1, -1}; // Initialize with invalid values
+    
+    if (plug_mutex == NULL) {
+        ESP_LOGE(TAG, "Driver not initialized");
+        return switch_details;
+    }
+
     driver_handle handle = switch_init(gpio_pin);
+    if (!handle) {
+        ESP_LOGE(TAG, "Failed to initialize switch");
+        return switch_details;
+    }
+
     on_off_plugin_unit::config_t config;
     config.on_off.on_off = DEFAULT_POWER;
     config.on_off.lighting.start_up_on_off = nullptr;
+    
     endpoint_t *endpoint = on_off_plugin_unit::create(node, &config, ENDPOINT_FLAG_NONE, handle);
     if (!endpoint) {
-        ESP_LOGE(TAG, "Failed to create switch endpoint for %d", gpio_pin);
-        switch_details.endpoint_id = -1;
-        switch_details.gpio_pin = -1;
+        ESP_LOGE(TAG, "Failed to create switch endpoint");
         return switch_details;
     }
 
-    for (int i = 0; i < configured_plugs; i++) {
-        if (plug_unit_list[i].gpio_pin == gpio_pin) {
-            ESP_LOGI(TAG, "Switch already configured: %d", endpoint::get_id(endpoint));
-            switch_details.endpoint_id = endpoint::get_id(endpoint);
-            switch_details.gpio_pin = gpio_pin;
-            return switch_details;
-        }
+    switch_details.gpio_pin = gpio_pin;
+    switch_details.endpoint_id = endpoint::get_id(endpoint);
+
+    if (add_plug_to_list(&switch_details) != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to add plug to list");
+        // TODO: Clean up endpoint
+        return {-1, -1};
     }
 
-    if (configured_plugs < MAX_CONFIGURABLE_PLUGS) {
-        plug_unit_list[configured_plugs].gpio_pin = gpio_pin;
-        plug_unit_list[configured_plugs].endpoint_id = endpoint::get_id(endpoint);
-        driver_plug_unit_set_defaults(endpoint::get_id(endpoint), gpio_pin);
-        configured_plugs++;
-    } else {
-        ESP_LOGI(TAG, "Cannot configure more plugs");
-        switch_details.endpoint_id = -1;
-        switch_details.gpio_pin = -1;
-        return switch_details;
-    }
-
-
-    static uint16_t plug_endpoint_id = 0;
-    plug_endpoint_id = endpoint::get_id(endpoint);
-    ESP_LOGI(TAG, "Plug created with endpoint_id %d", plug_endpoint_id);
-
+    driver_plug_unit_set_defaults(switch_details.endpoint_id, gpio_pin);
+    
+    // Create fixed label cluster
     cluster::fixed_label::config_t fl_config;
     cluster::fixed_label::create(endpoint, &fl_config, CLUSTER_FLAG_SERVER);
 
-    switch_details.endpoint_id = plug_endpoint_id;
-    switch_details.gpio_pin = gpio_pin;
+    ESP_LOGI(TAG, "Plug created with endpoint_id %d", switch_details.endpoint_id);
     return switch_details;
 }
 
 driver_handle switch_init(int gpio_pin) {
+    if (gpio_pin < 0 || gpio_pin >= GPIO_NUM_MAX) {
+        ESP_LOGE(TAG, "Invalid GPIO pin number: %d", gpio_pin);
+        return nullptr;
+    }
+
     button_config_t config = button_driver_get_config();
     config.gpio_button_config.gpio_num = gpio_pin;
     button_handle_t handle = iot_button_create(&config);
+    
+    if (handle == nullptr) {
+        ESP_LOGE(TAG, "Failed to create button handle for GPIO: %d", gpio_pin);
+        return nullptr;
+    }
 
-    gpio_set_direction((gpio_num_t)gpio_pin, GPIO_MODE_OUTPUT);
-    gpio_set_pull_mode((gpio_num_t)gpio_pin, GPIO_PULLUP_ONLY);
+    esp_err_t err = gpio_set_direction((gpio_num_t)gpio_pin, GPIO_MODE_OUTPUT);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to set GPIO direction: %d", err);
+        iot_button_delete(handle);
+        return nullptr;
+    }
+
+    err = gpio_set_pull_mode((gpio_num_t)gpio_pin, GPIO_PULLUP_ONLY);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to set GPIO pull mode: %d", err);
+        iot_button_delete(handle);
+        return nullptr;
+    }
+
     return (driver_handle)handle;
 }
 driver_handle input_switch_init(int gpio_pin, uint16_t endpoint_id) {
+    if (gpio_pin < 0 || gpio_pin >= GPIO_NUM_MAX) {
+        ESP_LOGE(TAG, "Invalid GPIO pin number: %d", gpio_pin);
+        return nullptr;
+    }
 
     button_config_t config = button_driver_get_config();
     config.gpio_button_config.gpio_num = gpio_pin;
     button_handle_t handle = iot_button_create(&config);
 
-    plug_unit_endpoint* callback_data = (plug_unit_endpoint*)malloc(sizeof(plug_unit_endpoint));
+    if (handle == nullptr) {
+        ESP_LOGE(TAG, "Failed to create button handle for GPIO: %d", gpio_pin);
+        return nullptr;
+    }
+
+    plug_unit_endpoint* callback_data = (plug_unit_endpoint*)calloc(1, sizeof(plug_unit_endpoint));
+    if (callback_data == nullptr) {
+        ESP_LOGE(TAG, "Failed to allocate memory for callback data");
+        iot_button_delete(handle);
+        return nullptr;
+    }
+
     callback_data->endpoint_id = endpoint_id;
     callback_data->gpio_pin = gpio_pin;
     ESP_LOGI(TAG, "endpoint_id %d", (int)endpoint_id);
-    iot_button_register_cb((button_handle_t)handle, BUTTON_PRESS_DOWN, driver_input_button_toggle_cb, callback_data);
 
-    gpio_set_direction((gpio_num_t)gpio_pin, GPIO_MODE_INPUT);
-    gpio_set_pull_mode((gpio_num_t)gpio_pin, GPIO_PULLUP_ONLY);
+    esp_err_t err = iot_button_register_cb(handle, BUTTON_PRESS_DOWN, driver_input_button_toggle_cb, callback_data);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to register button callback: %d", err);
+        free(callback_data);
+        iot_button_delete(handle);
+        return nullptr;
+    }
+
+    err = gpio_set_direction((gpio_num_t)gpio_pin, GPIO_MODE_INPUT);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to set GPIO direction: %d", err);
+        free(callback_data);
+        iot_button_delete(handle);
+        return nullptr;
+    }
+
+    err = gpio_set_pull_mode((gpio_num_t)gpio_pin, GPIO_PULLUP_ONLY);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to set GPIO pull mode: %d", err);
+        free(callback_data);
+        iot_button_delete(handle);
+        return nullptr;
+    }
 
     return (driver_handle)handle;
-};
+}
 driver_handle driver_button_init() {
     button_config_t config = button_driver_get_config();
     button_handle_t handle = iot_button_create(&config);
