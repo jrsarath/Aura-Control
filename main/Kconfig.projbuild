@@ -95,6 +95,11 @@ menu "Switch Configuration"
             help
                 The GPIO pin number for the output of switch 8. Default is 0 as in not set.
     endmenu
+    config SWITCH_INPUT_MODE
+        string "Switch Input Mode, Toggle/Pushbutton"
+        default "Toggle"
+        help
+            The mode of the switch input, either Toggle or Pushbutton.
     config GPIO_INDICATOR_LED
         int "GPIO Pin for Indicator LED"
         default 2

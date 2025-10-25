@@ -2,5 +2,6 @@ dependencies:
   espressif/cmake_utilities:
     version: 0.*
     rules: # will add "optional_component" only when all if clauses are True
-      - if: "idf_version >=5.0"
-      - if: "target in [esp32c2]"
+    - if: idf_version >=5.0
+    - if: target in [esp32c2]
+  espressif/esp_matter: ^1.4.2
