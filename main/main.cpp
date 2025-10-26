@@ -8,14 +8,16 @@
 #include <esp_matter.h>
 #include <esp_matter_ota.h>
 #include <esp_matter_console.h>
-#include <app_reset.h>
 #include <driver/gpio.h>
-#include <common_macros.h>
+#if CHIP_DEVICE_CONFIG_ENABLE_THREAD
+#include <platform/ESP32/OpenthreadLauncher.h>
+#endif
 #include <app/server/Server.h>
 #include <app/server/CommissioningWindowManager.h>
 
-#include "includes/variables.h"
-#include "includes/driver.h"
+#include "includes/variables.hpp"
+#include "includes/driver.hpp"
+#include "includes/utils.hpp"
 
 using namespace esp_matter;
 using namespace esp_matter::attribute;
@@ -24,6 +26,12 @@ using namespace chip::app::Clusters;
 
 static const char *TAG = "matter";
 
+/**
+ * @brief Application event callback
+ * 
+ * @param event Pointer to the ChipDeviceEvent
+ * @param arg   Argument passed during registration
+ */
 static void app_event_cb(const ChipDeviceEvent *event, intptr_t arg) {
     switch (event->Type) {
         case chip::DeviceLayer::DeviceEventType::kInterfaceIpAddressChanged:
@@ -58,11 +66,32 @@ static void app_event_cb(const ChipDeviceEvent *event, intptr_t arg) {
             break;
     }
 }
+
+/**
+ * @brief  Identification callback
+ * 
+ * @param type        Type of the identification event
+ * @param endpoint_id Endpoint ID of the identified device
+ * @param effect_id   Effect ID
+ * @param effect_variant Effect variant
+ * @param priv_data   Private data pointer
+ */
 static esp_err_t app_identification_cb(identification::callback_type_t type, uint16_t endpoint_id, uint8_t effect_id, uint8_t effect_variant, void *priv_data) {
     ESP_LOGI(TAG, "Identification callback: type: %u, effect: %u, variant: %u", type, effect_id, effect_variant);
-    device_identifier_cb();
+    // device_identifier_cb();
     return ESP_OK;
 }
+
+/**
+ * @brief Attribute update callback
+ * 
+ * @param type          Type of the callback (PRE_UPDATE/POST_UPDATE)
+ * @param endpoint_id   Endpoint ID of the attribute
+ * @param cluster_id    Cluster ID of the attribute
+ * @param attribute_id  Attribute ID
+ * @param val           Pointer to the attribute value
+ * @param priv_data     Private data pointer
+ */
 static esp_err_t app_attribute_update_cb(callback_type_t type, uint16_t endpoint_id, uint32_t cluster_id, uint32_t attribute_id, esp_matter_attr_val_t *val, void *priv_data) {
     esp_err_t err = ESP_OK;
     if (type == PRE_UPDATE) {
@@ -72,6 +101,10 @@ static esp_err_t app_attribute_update_cb(callback_type_t type, uint16_t endpoint
     return err;
 }
 
+/**
+ * @brief Application main entry point
+ * 
+ */
 extern "C" void app_main() {
     esp_err_t err = ESP_OK;
     
@@ -104,21 +137,22 @@ extern "C" void app_main() {
     }
 
     // Setup Switches
-    for (int i = 0; i < sizeof(outputPins) / sizeof(outputPins[0]); ++i) {
-        if (outputPins[i] > 0) {
-            plug_unit_endpoint plug = create_plug(outputPins[i], node);
-            if (plug.endpoint_id != -1) {
-                int inputPin = find_input_pin_by_output_pin(plug.gpio_pin);
-                if (inputPin > 0) {
-                    if (!input_switch_init(inputPin, plug.endpoint_id)) {
-                        ESP_LOGW(TAG, "Failed to initialize input switch for pin %d", inputPin);
-                    }
-                }
-            } else {
-                ESP_LOGW(TAG, "Failed to create plug for pin %d", outputPins[i]);
-            }
-        }
-    }
+
+    // for (int i = 0; i < sizeof(outputPins) / sizeof(outputPins[0]); ++i) {
+    //     if (outputPins[i] > 0) {
+    //         plug_unit_endpoint plug = create_plug(outputPins[i], node);
+    //         if (plug.endpoint_id != -1) {
+    //             int inputPin = find_input_pin_by_output_pin(plug.gpio_pin);
+    //             // if (inputPin > 0) {
+    //             //     if (!input_switch_init(inputPin, plug.endpoint_id)) {
+    //             //         ESP_LOGW(TAG, "Failed to initialize input switch for pin %d", inputPin);
+    //             //     }
+    //             // }
+    //         } else {
+    //             ESP_LOGW(TAG, "Failed to create plug for pin %d", outputPins[i]);
+    //         }
+    //     }
+    // }
 
     #if CHIP_DEVICE_CONFIG_ENABLE_THREAD
         // Set OpenThread platform config
@@ -132,7 +166,7 @@ extern "C" void app_main() {
 
     // Matter start
     err = esp_matter::start(app_event_cb);
-    ABORT_APP_ON_FAILURE(err == ESP_OK, ESP_LOGE(TAG, "Failed to start Matter, err:%d", err));
+    abort_on_failure(err == ESP_OK, TAG, "Failed to start Matter, err:%d", err);
 
     #if CONFIG_ENABLE_CHIP_SHELL
         esp_matter::console::diagnostics_register_commands();

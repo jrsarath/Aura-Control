@@ -1,7 +1,9 @@
 #pragma once
 
+
 #include <inttypes.h>
-#include <device.h>
+#include "sdkconfig.h"
+#include <driver/gpio.h>
 
 #define VARIABLES_H
 
@@ -13,13 +15,14 @@ extern "C" {
 #define DEFAULT_POWER false
 #define DEBOUNCE_DELAY_MS 1000
 
+// Runtime plug data
 struct plug_unit_endpoint {
     uint16_t endpoint_id;
-    int gpio_pin;
+    gpio_num_t output_gpio_pin;
+    gpio_num_t input_gpio_pin;
 };
 
-extern const int outputPins[MAX_CONFIGURABLE_PLUGS];
-extern const int inputPins[MAX_CONFIGURABLE_PLUGS];
+extern const plug_unit_endpoint plugs[MAX_CONFIGURABLE_PLUGS];
 
 #ifdef __cplusplus
 }

@@ -3,8 +3,12 @@
 #include <freertos/FreeRTOS.h>
 #include <esp_err.h>
 #include <esp_matter.h>
+#include "variables.hpp"
 
 using namespace esp_matter;
+using namespace esp_matter::attribute;
+using namespace esp_matter::endpoint;
+using namespace chip::app::Clusters;
 
 #if CHIP_DEVICE_CONFIG_ENABLE_THREAD
 #include "esp_openthread_types.h"
@@ -20,25 +24,23 @@ typedef struct {
     int gpio_pin;
     uint16_t endpoint_id;
 } gpio_isr_data_t;
-
 typedef void *driver_handle;
-
-typedef struct {
-    int gpio_pin;
-    uint16_t endpoint_id;
-} plug_unit_endpoint;
 
 // State management
 esp_err_t driver_init(void);
 esp_err_t driver_deinit(void);
 
 // Plug unit management
-plug_unit_endpoint create_plug(int gpio_pin, esp_matter::node_t* node);
+struct plug {
+    gpio_num_t output_gpio_pin;
+    gpio_num_t input_gpio_pin;
+};
+esp_err_t create_plug(plug* plug, esp_matter::node_t* node);
 esp_err_t delete_plug(uint16_t endpoint_id);
 esp_err_t get_plug_state(uint16_t endpoint_id, bool* state);
 
 // GPIO management
-driver_handle switch_init(int gpio_pin);
+esp_err_t switch_init(plug* plug);
 driver_handle input_switch_init(int gpio_pin, uint16_t endpoint_id);
 driver_handle driver_button_init(void);
 
