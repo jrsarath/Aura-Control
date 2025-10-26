@@ -103,7 +103,6 @@ static esp_err_t app_attribute_update_cb(callback_type_t type, uint16_t endpoint
 
 /**
  * @brief Application main entry point
- * 
  */
 extern "C" void app_main() {
     esp_err_t err = ESP_OK;
@@ -136,21 +135,28 @@ extern "C" void app_main() {
         return;
     }
 
-    // Setup Switches
+    // plug plug;
+    // plug.output_gpio_pin = (gpio_num_t)CONFIG_SWITCH_1_OUTPUT_PIN;
+    // plug.input_gpio_pin = (gpio_num_t)CONFIG_SWITCH_1_INPUT_PIN;
+    // create_plug(&plug, node);
 
-    // for (int i = 0; i < sizeof(outputPins) / sizeof(outputPins[0]); ++i) {
-    //     if (outputPins[i] > 0) {
-    //         plug_unit_endpoint plug = create_plug(outputPins[i], node);
-    //         if (plug.endpoint_id != -1) {
-    //             int inputPin = find_input_pin_by_output_pin(plug.gpio_pin);
-    //             // if (inputPin > 0) {
-    //             //     if (!input_switch_init(inputPin, plug.endpoint_id)) {
-    //             //         ESP_LOGW(TAG, "Failed to initialize input switch for pin %d", inputPin);
-    //             //     }
-    //             // }
-    //         } else {
-    //             ESP_LOGW(TAG, "Failed to create plug for pin %d", outputPins[i]);
+    // Setup Switches
+    // for (int i = 0; i < MAX_CONFIGURABLE_PLUGS; ++i) {
+    //     if (plugs[i].output_gpio_pin > 0) {
+    //         esp_err_t created_plug = create_plug(const_cast<plug *>(&plugs[i]), node);
+    //         if (created_plug != ESP_OK) {
+    //             ESP_LOGW(TAG, "Failed to create plug for pin %d", plugs[i].output_gpio_pin);
     //         }
+    //         // if (plug.endpoint_id != -1) {
+    //         //     int inputPin = find_input_pin_by_output_pin(plug.gpio_pin);
+    //         //     // if (inputPin > 0) {
+    //         //     //     if (!input_switch_init(inputPin, plug.endpoint_id)) {
+    //         //     //         ESP_LOGW(TAG, "Failed to initialize input switch for pin %d", inputPin);
+    //         //     //     }
+    //         //     // }
+    //         // } else {
+    //         //     ESP_LOGW(TAG, "Failed to create plug for pin %d", outputPins[i]);
+    //         // }
     //     }
     // }
 
@@ -171,6 +177,10 @@ extern "C" void app_main() {
     #if CONFIG_ENABLE_CHIP_SHELL
         esp_matter::console::diagnostics_register_commands();
         esp_matter::console::wifi_register_commands();
+        esp_matter::console::factoryreset_register_commands();
+    #if CONFIG_OPENTHREAD_CLI
+        esp_matter::console::otcli_register_commands();
+    #endif
         esp_matter::console::init();
     #endif
 }

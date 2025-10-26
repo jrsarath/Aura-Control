@@ -19,113 +19,113 @@ menu "Switch Configuration"
     menu "Switch 2"
         config SWITCH_2_INPUT_PIN
             int "GPIO Pin for Switch 2 input"
-            default 16
+            default 5
             range 0 39
             help
-                The GPIO pin number for the input of Switch 2. Default is 16.
+                The GPIO pin number for the input of Switch 2. Default is 5.
 
         config SWITCH_2_OUTPUT_PIN
             int "GPIO Pin for Switch 2 output"
-            default 32
+            default 13
             range 0 39
             help
-                The GPIO pin number for the output of Switch 2. Default is 32.
+                The GPIO pin number for the output of Switch 2. Default is 13.
     endmenu
 
     menu "Switch 3"
         config SWITCH_3_INPUT_PIN
             int "GPIO Pin for Switch 3 input"
-            default 17
+            default 6
             range 0 39
             help
-                The GPIO pin number for the input of Switch 3. Default is 17.
+                The GPIO pin number for the input of Switch 3. Default is 6.
 
         config SWITCH_3_OUTPUT_PIN
             int "GPIO Pin for Switch 3 output"
-            default 15
+            default 18
             range 0 39
             help
-                The GPIO pin number for the output of Switch 3. Default is 15.
+                The GPIO pin number for the output of Switch 3. Default is 18.
     endmenu
 
     menu "Switch 4"
         config SWITCH_4_INPUT_PIN
             int "GPIO Pin for Switch 4 input"
-            default 18
+            default 7
             range 0 39
             help
-                The GPIO pin number for the input of Switch 4. Default is 18.
+                The GPIO pin number for the input of Switch 4. Default is 7.
 
         config SWITCH_4_OUTPUT_PIN
             int "GPIO Pin for Switch 4 output"
-            default 25
+            default 19
             range 0 39
             help
-                The GPIO pin number for the output of Switch 4. Default is 25.
+                The GPIO pin number for the output of Switch 4. Default is 19.
     endmenu
 
     menu "Switch 5"
         config SWITCH_5_INPUT_PIN
             int "GPIO Pin for Switch 5 input"
-            default 19
+            default 3
             range 0 39
             help
-                The GPIO pin number for the input of Switch 5. Default is 19.
+                The GPIO pin number for the input of Switch 5. Default is 3.
 
         config SWITCH_5_OUTPUT_PIN
             int "GPIO Pin for Switch 5 output"
-            default 26
+            default 20
             range 0 39
             help
-                The GPIO pin number for the output of Switch 5. Default is 26.
+                The GPIO pin number for the output of Switch 5. Default is 20.
     endmenu
 
     menu "Switch 6"
         config SWITCH_6_INPUT_PIN
             int "GPIO Pin for Switch 6 input"
-            default 21
+            default 2
             range 0 39
             help
-                The GPIO pin number for the input of Switch 6. Default is 21.
+                The GPIO pin number for the input of Switch 6. Default is 2.
 
         config SWITCH_6_OUTPUT_PIN
             int "GPIO Pin for Switch 6 output"
-            default 27
+            default 21
             range 0 39
             help
-                The GPIO pin number for the output of Switch 6. Default is 27.
+                The GPIO pin number for the output of Switch 6. Default is 21.
     endmenu
 
     menu "Switch 7"
         config SWITCH_7_INPUT_PIN
             int "GPIO Pin for Switch 7 input"
-            default 22
+            default 10
             range 0 39
             help
-                The GPIO pin number for the input of Switch 7. Default is 22.
+                The GPIO pin number for the input of Switch 7. Default is 10.
 
         config SWITCH_7_OUTPUT_PIN
             int "GPIO Pin for Switch 7 output"
-            default 14
+            default 22
             range 0 39
             help
-                The GPIO pin number for the output of Switch 7. Default is 14.
+                The GPIO pin number for the output of Switch 7. Default is 22.
     endmenu
 
     menu "Switch 8"
         config SWITCH_8_INPUT_PIN
             int "GPIO Pin for Switch 8 input"
-            default 23
+            default 11
             range 0 39
             help
-                The GPIO pin number for the input of Switch 8. Default is 23.
+                The GPIO pin number for the input of Switch 8. Default is 11.
 
         config SWITCH_8_OUTPUT_PIN
             int "GPIO Pin for Switch 8 output"
-            default 13
+            default 23
             range 0 39
             help
-                The GPIO pin number for the output of Switch 8. Default is 13.
+                The GPIO pin number for the output of Switch 8. Default is 23.
     endmenu
 
     menu "Other"

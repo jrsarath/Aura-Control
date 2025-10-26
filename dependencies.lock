@@ -295,6 +295,6 @@ dependencies:
 direct_dependencies:
 - espressif/esp_bsp_devkit
 - espressif/esp_matter
-manifest_hash: 6204d6c9aec34240a845099554665640974565eb4720f6ee484a41fb55fe76e7
-target: esp32
+manifest_hash: 20b5adc0afc694562a2dbbb6c86f423e1e729f08da91b18d6cd1b61984515a1e
+target: esp32c6
 version: 2.0.0

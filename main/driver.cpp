@@ -46,6 +46,7 @@ static gpio_num_t get_gpio_by_endpoint(uint16_t endpoint_id) {
     }
     return gpio_pin;
 }
+
 static void driver_button_toggle_cb(void *arg, void *data) {
     ESP_LOGI(TAG, "Toggle button pressed");
 }
@@ -64,8 +65,39 @@ static void driver_input_button_toggle_cb(void *arg, void *data) {
     attribute::update(callback_data->endpoint_id, cluster::get_id(cluster), attribute::get_id(attribute), &val);
 }
 
+/**
+ * @brief Update the GPIO value
+ * 
+ * @param pin gpio pin number
+ * @param value new value to set
+ * @return esp_err_t 
+ */
+static esp_err_t driver_update_gpio_value(gpio_num_t pin, bool value) {
+    esp_err_t err = ESP_OK;
+
+    err = gpio_set_level(pin, value);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to set GPIO level");
+        return ESP_FAIL;
+    } else {
+        ESP_LOGI(TAG, "GPIO pin : %d set to %d", pin, value);
+    }
+    return err;
+}
+
+/**
+ * @brief Update the attribute value
+ * 
+ * @param driver_handle driver_handle
+ * @param endpoint_id endpoint_id
+ * @param cluster_id cluster_id
+ * @param attribute_id attribute_id
+ * @param val val
+ * @return esp_err_t
+ */
 esp_err_t driver_attribute_update(driver_handle driver_handle, uint16_t endpoint_id, uint32_t cluster_id, uint32_t attribute_id, esp_matter_attr_val_t *val) {
     esp_err_t err = ESP_OK;
+    
     if (cluster_id == OnOff::Id) {
         if (attribute_id == OnOff::Attributes::OnOff::Id) {
            gpio_num_t gpio_index = get_gpio_by_endpoint(endpoint_id);
@@ -76,8 +108,21 @@ esp_err_t driver_attribute_update(driver_handle driver_handle, uint16_t endpoint
            } 
         }
     }
+
+    if (cluster_id == OnOff::Id) {
+        if (attribute_id == OnOff::Attributes::OnOff::Id) {
+            gpio_num_t gpio_pin = get_gpio_by_endpoint(endpoint_id);
+            if (gpio_pin != GPIO_NUM_NC) {
+                err = driver_update_gpio_value(gpio_pin, val->val.b);
+            } else {
+                ESP_LOGE(TAG, "GPIO pin mapping for endpoint_id: %d not found", endpoint_id);
+                return ESP_FAIL;
+            }
+        }
+    }
     return err;
 }
+
 esp_err_t driver_plug_unit_set_defaults(uint16_t endpoint_id, gpio_num_t gpio_pin) {
     esp_err_t err = ESP_OK;
     if (gpio_pin != GPIO_NUM_NC){
@@ -97,6 +142,11 @@ esp_err_t driver_plug_unit_set_defaults(uint16_t endpoint_id, gpio_num_t gpio_pi
     return err;
 }
 
+/**
+ * @brief Initialize the driver
+ * 
+ * @return esp_err_t 
+ */
 esp_err_t driver_init(void) {
     if (plug_mutex == NULL) {
         plug_mutex = xSemaphoreCreateMutex();
@@ -108,48 +158,6 @@ esp_err_t driver_init(void) {
     configured_plugs = 0;
     memset(plug_unit_list, 0, sizeof(plug_unit_list));
     return ESP_OK;
-}
-
-esp_err_t driver_deinit(void) {
-    if (plug_mutex) {
-        vSemaphoreDelete(plug_mutex);
-        plug_mutex = NULL;
-    }
-    return ESP_OK;
-}
-
-static esp_err_t add_plug_to_list(plug_unit_endpoint* plug) {
-    esp_err_t ret = ESP_ERR_NO_MEM;
-    
-    if (xSemaphoreTake(plug_mutex, portMAX_DELAY) == pdTRUE) {
-        if (configured_plugs < MAX_CONFIGURABLE_PLUGS) {
-            memcpy(&plug_unit_list[configured_plugs], plug, sizeof(plug_unit_endpoint));
-            configured_plugs++;
-            ret = ESP_OK;
-        }
-        xSemaphoreGive(plug_mutex);
-    }
-    return ret;
-}
-
-esp_err_t delete_plug(uint16_t endpoint_id) {
-    esp_err_t ret = ESP_ERR_NOT_FOUND;
-    
-    if (xSemaphoreTake(plug_mutex, portMAX_DELAY) == pdTRUE) {
-        for (int i = 0; i < configured_plugs; i++) {
-            if (plug_unit_list[i].endpoint_id == endpoint_id) {
-                // Shift remaining elements
-                for (int j = i; j < configured_plugs - 1; j++) {
-                    memcpy(&plug_unit_list[j], &plug_unit_list[j + 1], sizeof(plug_unit_endpoint));
-                }
-                configured_plugs--;
-                ret = ESP_OK;
-                break;
-            }
-        }
-        xSemaphoreGive(plug_mutex);
-    }
-    return ret;
 }
 
 // esp_err_t get_plug_state(uint16_t endpoint_id, bool* state) {
@@ -180,7 +188,6 @@ esp_err_t create_plug(plug* plug, node_t* node) {
         ESP_LOGE(TAG, "Matter node cannot be NULL");
         return ESP_ERR_INVALID_ARG;
     }
-
     if (!plug) {
         ESP_LOGE(TAG, "Plug cannot be NULL");
         return ESP_ERR_INVALID_ARG;
@@ -315,7 +322,6 @@ driver_handle driver_button_init() {
 
 /**
  * @brief Device identification callback
- * 
  */
 void device_identifier_cb() {
     gpio_set_direction((gpio_num_t)CONFIG_GPIO_INDICATOR_LED, GPIO_MODE_OUTPUT);
@@ -332,7 +338,6 @@ void device_identifier_cb() {
 
 /**
  * @brief Device commission window open callback
- * 
  */
 void device_commission_window_open_cb() {
     gpio_set_direction((gpio_num_t)CONFIG_GPIO_INDICATOR_LED, GPIO_MODE_OUTPUT);
@@ -348,7 +353,6 @@ void device_commission_window_open_cb() {
 
 /**
  * @brief Device commission window close callback
- * 
  */
 void device_commission_window_close_cb() {
     gpio_set_level((gpio_num_t)CONFIG_GPIO_INDICATOR_LED, 0);
