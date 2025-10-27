@@ -39,6 +39,18 @@ struct plug_unit_endpoint {
 typedef void *driver_handle;
 
 /**
+ * @brief Update the attribute value
+ * 
+ * @param driver_handle driver_handle
+ * @param endpoint_id endpoint_id
+ * @param cluster_id cluster_id
+ * @param attribute_id attribute_id
+ * @param val pointer to the attribute value
+ * @return esp_err_t 
+ */
+esp_err_t driver_attribute_update(driver_handle driver_handle, uint16_t endpoint_id, uint32_t cluster_id, uint32_t attribute_id, esp_matter_attr_val_t *val);
+
+/**
  * @brief Initialize the driver
  * 
  * @return esp_err_t 
@@ -55,19 +67,20 @@ esp_err_t driver_init(void);
 esp_err_t create_plug(plug* plug, esp_matter::node_t* node);
 
 /**
- * @brief Initialize a switch object
+ * @brief Initialize a plug object
  * 
  * @param plug plug pointer
  * @return esp_err_t 
  */
-esp_err_t switch_init(plug* plug);
+esp_err_t plug_init(plug* plug);
 
-
-esp_err_t delete_plug(uint16_t endpoint_id);
-esp_err_t get_plug_state(uint16_t endpoint_id, bool* state);
-
-// GPIO management
-
+/**
+ * @brief Initialize the input switch
+ * 
+ * @param gpio_pin GPIO pin number
+ * @param endpoint_id Endpoint ID
+ * @return driver_handle 
+ */
 driver_handle input_switch_init(int gpio_pin, uint16_t endpoint_id);
 
 /**
@@ -77,8 +90,6 @@ driver_handle input_switch_init(int gpio_pin, uint16_t endpoint_id);
  */
 driver_handle driver_button_init(void);
 
-// Callbacks
-esp_err_t driver_attribute_update(driver_handle driver_handle, uint16_t endpoint_id, uint32_t cluster_id, uint32_t attribute_id, esp_matter_attr_val_t *val);
 
 /**
  * @brief Device identifier callback
@@ -94,16 +105,6 @@ void device_commission_window_open_cb(void);
  * @brief Device commission window close callback
  */
 void device_commission_window_close_cb(void);
-
-esp_err_t sensor_attribute_update_cb(esp_matter::attribute::callback_type_t type, uint16_t endpoint_id, uint32_t cluster_id, uint32_t attribute_id, esp_matter_attr_val_t *val, void *priv_data);
-
-int find_input_pin_by_output_pin(int outputPin);
-
-/**
- * Input button callback
- * @return void
- */
-// void driver_input_button_toggle_cb(void *arg, void *data);
 
 #ifdef __cplusplus
 }

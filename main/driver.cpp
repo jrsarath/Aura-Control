@@ -22,15 +22,6 @@ static uint16_t configured_plugs = 0;
 static plug_unit_endpoint plug_unit_list[MAX_CONFIGURABLE_PLUGS];
 static SemaphoreHandle_t plug_mutex = NULL;
 
-// int find_input_pin_by_output_pin(int outputPin) {
-//     for (int i = 0; i < sizeof(plug_unit_list) / sizeof(plug_unit_list[0]); ++i) {
-//         if (outputPins[i] == outputPin) {
-//             return inputPins[i];
-//         }
-//     }
-//     return -1;
-// }
-
 /**
  * @brief Get the gpio by endpoint object
  * 
@@ -47,9 +38,22 @@ static gpio_num_t get_gpio_by_endpoint(uint16_t endpoint_id) {
     return gpio_pin;
 }
 
+/**
+ * @brief Input button callback
+ * 
+ * @param arg 
+ * @param data 
+ */
 static void driver_button_toggle_cb(void *arg, void *data) {
     ESP_LOGI(TAG, "Toggle button pressed");
 }
+
+/**
+ * @brief Input button callback
+ * 
+ * @param arg 
+ * @param data 
+ */
 static void driver_input_button_toggle_cb(void *arg, void *data) {
     plug_unit_endpoint* callback_data = (plug_unit_endpoint*) data;
     ESP_LOGI(TAG, "Toggle button pressed, %d", callback_data->endpoint_id);
@@ -97,15 +101,16 @@ static esp_err_t driver_update_gpio_value(gpio_num_t pin, bool value) {
  */
 esp_err_t driver_attribute_update(driver_handle driver_handle, uint16_t endpoint_id, uint32_t cluster_id, uint32_t attribute_id, esp_matter_attr_val_t *val) {
     esp_err_t err = ESP_OK;
-    
+    ESP_LOGI(TAG, "Driver attribute update called for endpoint_id: %d, cluster_id: %" PRIu32 ", attribute_id: %" PRIu32 ", value: %d", endpoint_id, cluster_id, attribute_id, val->val.b);
+
     if (cluster_id == OnOff::Id) {
         if (attribute_id == OnOff::Attributes::OnOff::Id) {
            gpio_num_t gpio_index = get_gpio_by_endpoint(endpoint_id);
            if (gpio_index != -1){
                 gpio_num_t GPIO_PIN = plug_unit_list[gpio_index].output_gpio_pin;
                 ESP_LOGI(TAG, "Toggling GPIO: %d, Val : %d", GPIO_PIN, val->val.b);
-                gpio_set_level(GPIO_PIN, !val->val.b);
-           } 
+                gpio_set_level(GPIO_PIN, val->val.b);
+           }
         }
     }
 
@@ -123,8 +128,16 @@ esp_err_t driver_attribute_update(driver_handle driver_handle, uint16_t endpoint
     return err;
 }
 
+/**
+ * @brief Set the default state of the plug unit
+ * 
+ * @param endpoint_id 
+ * @param gpio_pin 
+ * @return esp_err_t 
+ */
 esp_err_t driver_plug_unit_set_defaults(uint16_t endpoint_id, gpio_num_t gpio_pin) {
     esp_err_t err = ESP_OK;
+    
     if (gpio_pin != GPIO_NUM_NC){
         node_t *node = node::get();
         endpoint_t *endpoint = endpoint::get(node, endpoint_id);
@@ -136,7 +149,7 @@ esp_err_t driver_plug_unit_set_defaults(uint16_t endpoint_id, gpio_num_t gpio_pi
         esp_matter_attr_val_t val = esp_matter_invalid(NULL);
         attribute::get_val(attribute, &val);
 
-        err |= gpio_set_level((gpio_num_t)gpio_pin, !val.val.b);
+        err |= driver_update_gpio_value(gpio_pin, val.val.b);
     } 
 
     return err;
@@ -210,7 +223,7 @@ esp_err_t create_plug(plug* plug, node_t* node) {
     }
 
     // GPIO pin Initialization
-    err = switch_init(plug);
+    err = plug_init(plug);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "Failed to initialize plug");
     }
@@ -219,6 +232,7 @@ esp_err_t create_plug(plug* plug, node_t* node) {
     if (configured_plugs < MAX_CONFIGURABLE_PLUGS) {
         plug_unit_list[configured_plugs].output_gpio_pin = plug->output_gpio_pin;
         plug_unit_list[configured_plugs].endpoint_id = endpoint::get_id(endpoint);
+        driver_plug_unit_set_defaults(endpoint::get_id(endpoint), plug->output_gpio_pin);
         configured_plugs++;
     } else {
         ESP_LOGE(TAG, "Maximum plugs configuration limit exceeded!!!");
@@ -227,16 +241,20 @@ esp_err_t create_plug(plug* plug, node_t* node) {
 
     uint16_t plug_endpoint_id = endpoint::get_id(endpoint);
     ESP_LOGI(TAG, "Plug created with endpoint_id %d", plug_endpoint_id);
+
+    cluster::fixed_label::config_t fl_config;
+    cluster::fixed_label::create(endpoint, &fl_config, CLUSTER_FLAG_SERVER);
+
     return err;
 }
 
 /**
- * @brief Initialize a switch on the specified GPIO pin.
+ * @brief Initialize a plug on the specified GPIO pin.
  * 
  * @param plug Pointer to the plug structure containing GPIO pin information.
- * @return A driver handle for the initialized switch, or nullptr on failure.
+ * @return A driver handle for the initialized plug, or nullptr on failure.
  */
-esp_err_t switch_init(plug* plug) {
+esp_err_t plug_init(plug* plug) {
     esp_err_t err = ESP_OK;
 
     gpio_reset_pin(plug->output_gpio_pin);

@@ -135,10 +135,10 @@ extern "C" void app_main() {
         return;
     }
 
-    // plug plug;
-    // plug.output_gpio_pin = (gpio_num_t)CONFIG_SWITCH_1_OUTPUT_PIN;
-    // plug.input_gpio_pin = (gpio_num_t)CONFIG_SWITCH_1_INPUT_PIN;
-    // create_plug(&plug, node);
+    plug plug;
+    plug.output_gpio_pin = (gpio_num_t)CONFIG_SWITCH_1_OUTPUT_PIN;
+    plug.input_gpio_pin = (gpio_num_t)CONFIG_SWITCH_1_INPUT_PIN;
+    create_plug(&plug, node);
 
     // Setup Switches
     // for (int i = 0; i < MAX_CONFIGURABLE_PLUGS; ++i) {
