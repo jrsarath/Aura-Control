@@ -84,12 +84,10 @@ static void app_event_cb(const ChipDeviceEvent *event, intptr_t arg) {
  */
 static esp_err_t app_identification_cb(identification::callback_type_t type, uint16_t endpoint_id, uint8_t effect_id, uint8_t effect_variant, void *priv_data) {
     ESP_LOGI(TAG, "Identification callback: type: %u, effect: %u, variant: %u", type, effect_id, effect_variant);
-    // device_identifier_cb();
-    // Start a non-blocking identification blink: blink endpoint_id times
-    if (type == identification::callback_type_t::start) {
-        argb_identify_blink(endpoint_id);
-    } else if (type == identification::callback_type_t::stop) {
-        argb_identify_stop();
+    if (type == identification::callback_type_t::START) {
+        driver_identify_pulse(endpoint_id);
+    } else if (type == identification::callback_type_t::STOP) {
+        driver_identify_stop();
     }
     return ESP_OK;
 }

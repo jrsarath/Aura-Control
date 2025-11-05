@@ -21,6 +21,11 @@ static const char *TAG = "driver";
 static uint16_t configured_plugs = 0;
 static plug_unit_endpoint plug_unit_list[MAX_CONFIGURABLE_PLUGS];
 static SemaphoreHandle_t plug_mutex = NULL;
+// Identification pulse state (driver-side)
+static TaskHandle_t s_ident_task_drv = NULL;
+static volatile bool s_ident_running_drv = false;
+static uint16_t s_ident_count_drv = 0;
+static gpio_num_t s_ident_gpio_drv = GPIO_NUM_NC;
 
 /**
  * @brief Get the gpio by endpoint object
@@ -36,6 +41,116 @@ static gpio_num_t get_gpio_by_endpoint(uint16_t endpoint_id) {
         }
     }
     return gpio_pin;
+}
+
+/**
+ * @brief Update the GPIO value
+ * 
+ * @param pin gpio pin number
+ * @param value new value to set
+ * @return esp_err_t 
+ */
+static esp_err_t driver_update_gpio_value(gpio_num_t pin, bool value) {
+    esp_err_t err = ESP_OK;
+
+    ESP_LOGI(TAG, "Setting GPIO pin : %d to %d", pin, value);
+    err = gpio_set_level(pin, value);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to set GPIO level");
+        return ESP_FAIL;
+    } else {
+        ESP_LOGI(TAG, "GPIO pin : %d set to %d", pin, value);
+    }
+    return err;
+}
+
+/**
+ * @brief Identification task for driver
+ * 
+ * @param arg 
+ */
+static void identification_task_drv(void *arg) {
+    (void)arg;
+    ESP_LOGI(TAG, "Driver identification task started (blinks=%u)", s_ident_count_drv);
+
+    const uint32_t on_ms = 2000;
+
+    int orig_level = -1;
+    if (s_ident_gpio_drv != GPIO_NUM_NC) {
+        // ensure gpio is output so we can set level
+        gpio_set_direction(s_ident_gpio_drv, GPIO_MODE_OUTPUT);
+        orig_level = gpio_get_level(s_ident_gpio_drv);
+    }
+
+    // Single simple toggle: set opposite, wait 2s, restore original
+    if (s_ident_gpio_drv != GPIO_NUM_NC && orig_level >= 0) {
+        ESP_LOGI(TAG, "Driver identification task, Setting GPIO %d to %d", s_ident_gpio_drv, !orig_level);
+        gpio_set_level(s_ident_gpio_drv, !orig_level);
+        vTaskDelay(pdMS_TO_TICKS(on_ms));
+        ESP_LOGI(TAG, "Driver identification task, Returning GPIO %d to %d", s_ident_gpio_drv, orig_level);
+        gpio_set_level(s_ident_gpio_drv, orig_level);
+    }
+
+    ESP_LOGI(TAG, "Driver identification task stopping");
+    s_ident_running_drv = false;
+    TaskHandle_t t = s_ident_task_drv;
+    s_ident_task_drv = NULL;
+    if (t) vTaskDelete(NULL);
+}
+
+/**
+ * @brief Start the driver identification pulse
+ * 
+ * @param endpoint_id 
+ */
+void driver_identify_pulse(uint16_t endpoint_id) {
+    // cancel previous
+    if (s_ident_running_drv) {
+        driver_identify_stop();
+    }
+
+    // For switches, a single on/off (or off/on) pulse is sufficient
+    uint32_t blinks = 1;
+
+    gpio_num_t gpio = get_gpio_by_endpoint(endpoint_id);
+    if (gpio == GPIO_NUM_NC) {
+        ESP_LOGE(TAG, "No GPIO mapping for endpoint %d", endpoint_id);
+        return;
+    }
+
+    s_ident_gpio_drv = gpio;
+    s_ident_count_drv = blinks;
+    s_ident_running_drv = true;
+
+    BaseType_t created = xTaskCreate(identification_task_drv, "drv_ident", 3072, NULL, tskIDLE_PRIORITY + 1, &s_ident_task_drv);
+    if (created != pdPASS) {
+        ESP_LOGE(TAG, "Failed to create driver identification task");
+        s_ident_running_drv = false;
+        s_ident_task_drv = NULL;
+    }
+}
+
+/**
+ * @brief Stop the driver identification pulse
+ * 
+ */
+void driver_identify_stop(void) {
+    if (!s_ident_running_drv && s_ident_task_drv == NULL) return;
+    s_ident_running_drv = false;
+    // Wait long enough for the single toggle to finish (on_ms ~= 2000ms)
+    const TickType_t wait_ticks = pdMS_TO_TICKS(3000);
+    const TickType_t poll_ticks = pdMS_TO_TICKS(50);
+    TickType_t waited = 0;
+    while (s_ident_task_drv != NULL && waited < wait_ticks) {
+        vTaskDelay(poll_ticks);
+        waited += poll_ticks;
+    }
+    if (s_ident_task_drv != NULL) {
+        vTaskDelete(s_ident_task_drv);
+        s_ident_task_drv = NULL;
+    }
+    s_ident_running_drv = false;
+    s_ident_gpio_drv = GPIO_NUM_NC;
 }
 
 /**
@@ -67,27 +182,6 @@ static void driver_input_button_toggle_cb(void *arg, void *data) {
     attribute::get_val(attribute, &val);
     val.val.b = !val.val.b;
     attribute::update(callback_data->endpoint_id, cluster::get_id(cluster), attribute::get_id(attribute), &val);
-}
-
-/**
- * @brief Update the GPIO value
- * 
- * @param pin gpio pin number
- * @param value new value to set
- * @return esp_err_t 
- */
-static esp_err_t driver_update_gpio_value(gpio_num_t pin, bool value) {
-    esp_err_t err = ESP_OK;
-
-    ESP_LOGI(TAG, "Setting GPIO pin : %d to %d", pin, value);
-    err = gpio_set_level(pin, value);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to set GPIO level");
-        return ESP_FAIL;
-    } else {
-        ESP_LOGI(TAG, "GPIO pin : %d set to %d", pin, value);
-    }
-    return err;
 }
 
 /**
@@ -140,7 +234,6 @@ esp_err_t driver_plug_unit_set_defaults(uint16_t endpoint_id, gpio_num_t gpio_pi
         attribute::get_val(attribute, &val);
 
         ESP_LOGI(TAG, "Setting default state for endpoint_id: %d, gpio_pin: %d, state: %d", endpoint_id, gpio_pin, !val.val.b);
-
         err |= driver_update_gpio_value(gpio_pin, !val.val.b);
     } 
 

@@ -109,6 +109,18 @@ void device_commission_window_open_cb(void);
  */
 void device_commission_window_close_cb(void);
 
+/**
+ * @brief Start a non-blocking identification pulse on the physical switch.
+ *
+ */
+void driver_identify_pulse(uint16_t endpoint_id);
+
+/**
+ * @brief Stop any running identification pulse.
+ * 
+ */
+void driver_identify_stop(void);
+
 #ifdef __cplusplus
 }
 #endif
