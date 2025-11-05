@@ -200,22 +200,30 @@ esp_err_t argb_blink_all(led_strip_handle_t strip, uint32_t count, uint8_t r, ui
  */
 static void commissioning_task(void *arg) {
     (void)arg;
-    ESP_LOGI(TAG, "ARGB commissioning task started");
-    // Gentle two-level blue pulse
-    const uint8_t bright = 48;
-    const uint8_t dim = 12;
-    const TickType_t delay_ticks = pdMS_TO_TICKS(400);
+    ESP_LOGI(TAG, "ARGB commissioning task started (smooth fade)");
+
+    const uint8_t max_brightness = 140; // peak blue brightness (0-255)
+    const uint8_t min_brightness = 2;   // minimal visible level
+    const int steps = 48;               // steps per ramp
+    const TickType_t step_delay = pdMS_TO_TICKS(15); // ms per step
 
     while (s_commissioning_running) {
-        if (s_commissioning_strip) {
-            argb_set_all(s_commissioning_strip, s_commissioning_count, 0, 0, bright);
+        // Ramp up
+        for (int i = 0; i <= steps && s_commissioning_running; ++i) {
+            uint8_t b = (uint8_t)(min_brightness + ((max_brightness - min_brightness) * i) / steps);
+            if (s_commissioning_strip) {
+                argb_set_all(s_commissioning_strip, s_commissioning_count, 0, 0, b);
+            }
+            vTaskDelay(step_delay);
         }
-        vTaskDelay(delay_ticks);
-        if (!s_commissioning_running) break;
-        if (s_commissioning_strip) {
-            argb_set_all(s_commissioning_strip, s_commissioning_count, 0, 0, dim);
+        // Ramp down
+        for (int i = steps; i >= 0 && s_commissioning_running; --i) {
+            uint8_t b = (uint8_t)(min_brightness + ((max_brightness - min_brightness) * i) / steps);
+            if (s_commissioning_strip) {
+                argb_set_all(s_commissioning_strip, s_commissioning_count, 0, 0, b);
+            }
+            vTaskDelay(step_delay);
         }
-        vTaskDelay(delay_ticks);
     }
 
     // Clear on exit
