@@ -40,10 +40,12 @@ static void app_event_cb(const ChipDeviceEvent *event, intptr_t arg) {
 
         case chip::DeviceLayer::DeviceEventType::kCommissioningComplete:
             ESP_LOGI(TAG, "Commissioning complete");
+            argb_stop_commissioning();
             break;
 
         case chip::DeviceLayer::DeviceEventType::kFailSafeTimerExpired:
             ESP_LOGI(TAG, "Commissioning failed, fail safe timer expired");
+            argb_stop_commissioning();
             break;
 
         case chip::DeviceLayer::DeviceEventType::kCommissioningSessionStarted:
@@ -52,14 +54,18 @@ static void app_event_cb(const ChipDeviceEvent *event, intptr_t arg) {
 
         case chip::DeviceLayer::DeviceEventType::kCommissioningSessionStopped:
             ESP_LOGI(TAG, "Commissioning session stopped");
+            argb_stop_commissioning();
             break;
 
         case chip::DeviceLayer::DeviceEventType::kCommissioningWindowOpened:
             ESP_LOGI(TAG, "Commissioning window opened");
+            // Start non-blocking commissioning glow on GPIO 8 (single pixel)
+            argb_start_commissioning(8, 1);
             break;
 
         case chip::DeviceLayer::DeviceEventType::kCommissioningWindowClosed:
             ESP_LOGI(TAG, "Commissioning window closed");
+            argb_stop_commissioning();
             break;
 
         default:
@@ -135,30 +141,18 @@ extern "C" void app_main() {
         return;
     }
 
-    plug plug;
-    plug.output_gpio_pin = (gpio_num_t)CONFIG_SWITCH_1_OUTPUT_PIN;
-    plug.input_gpio_pin = (gpio_num_t)CONFIG_SWITCH_1_INPUT_PIN;
-    create_plug(&plug, node);
-
     // Setup Switches
-    // for (int i = 0; i < MAX_CONFIGURABLE_PLUGS; ++i) {
-    //     if (plugs[i].output_gpio_pin > 0) {
-    //         esp_err_t created_plug = create_plug(const_cast<plug *>(&plugs[i]), node);
-    //         if (created_plug != ESP_OK) {
-    //             ESP_LOGW(TAG, "Failed to create plug for pin %d", plugs[i].output_gpio_pin);
-    //         }
-    //         // if (plug.endpoint_id != -1) {
-    //         //     int inputPin = find_input_pin_by_output_pin(plug.gpio_pin);
-    //         //     // if (inputPin > 0) {
-    //         //     //     if (!input_switch_init(inputPin, plug.endpoint_id)) {
-    //         //     //         ESP_LOGW(TAG, "Failed to initialize input switch for pin %d", inputPin);
-    //         //     //     }
-    //         //     // }
-    //         // } else {
-    //         //     ESP_LOGW(TAG, "Failed to create plug for pin %d", outputPins[i]);
-    //         // }
-    //     }
-    // }
+    for (int i = 0; i < MAX_CONFIGURABLE_PLUGS; ++i) {
+        if (plugs[i].output_gpio_pin > 0) {
+            plug plug;
+            plug.output_gpio_pin = (gpio_num_t)plugs[i].output_gpio_pin;
+            plug.input_gpio_pin = (gpio_num_t)plugs[i].input_gpio_pin;
+            esp_err_t created_plug = create_plug(&plug, node);
+            if (created_plug != ESP_OK) {
+                ESP_LOGW(TAG, "Failed to create plug for pin %d", plugs[i].output_gpio_pin);
+            }
+        }
+    }
 
     #if CHIP_DEVICE_CONFIG_ENABLE_THREAD
         // Set OpenThread platform config

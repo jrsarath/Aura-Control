@@ -8,7 +8,6 @@ product-id,data,u32
 product-name,data,string
 hardware-ver,data,u32
 hw-ver-str,data,string
-mfg-date,data,string
 serial-num,data,string
 dac-cert,file,binary
 dac-key,file,binary

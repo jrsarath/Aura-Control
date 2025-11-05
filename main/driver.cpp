@@ -79,6 +79,7 @@ static void driver_input_button_toggle_cb(void *arg, void *data) {
 static esp_err_t driver_update_gpio_value(gpio_num_t pin, bool value) {
     esp_err_t err = ESP_OK;
 
+    ESP_LOGI(TAG, "Setting GPIO pin : %d to %d", pin, value);
     err = gpio_set_level(pin, value);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "Failed to set GPIO level");
@@ -105,20 +106,9 @@ esp_err_t driver_attribute_update(driver_handle driver_handle, uint16_t endpoint
 
     if (cluster_id == OnOff::Id) {
         if (attribute_id == OnOff::Attributes::OnOff::Id) {
-           gpio_num_t gpio_index = get_gpio_by_endpoint(endpoint_id);
-           if (gpio_index != -1){
-                gpio_num_t GPIO_PIN = plug_unit_list[gpio_index].output_gpio_pin;
-                ESP_LOGI(TAG, "Toggling GPIO: %d, Val : %d", GPIO_PIN, val->val.b);
-                gpio_set_level(GPIO_PIN, val->val.b);
-           }
-        }
-    }
-
-    if (cluster_id == OnOff::Id) {
-        if (attribute_id == OnOff::Attributes::OnOff::Id) {
             gpio_num_t gpio_pin = get_gpio_by_endpoint(endpoint_id);
             if (gpio_pin != GPIO_NUM_NC) {
-                err = driver_update_gpio_value(gpio_pin, val->val.b);
+                err = driver_update_gpio_value(gpio_pin, !val->val.b);
             } else {
                 ESP_LOGE(TAG, "GPIO pin mapping for endpoint_id: %d not found", endpoint_id);
                 return ESP_FAIL;
@@ -149,7 +139,9 @@ esp_err_t driver_plug_unit_set_defaults(uint16_t endpoint_id, gpio_num_t gpio_pi
         esp_matter_attr_val_t val = esp_matter_invalid(NULL);
         attribute::get_val(attribute, &val);
 
-        err |= driver_update_gpio_value(gpio_pin, val.val.b);
+        ESP_LOGI(TAG, "Setting default state for endpoint_id: %d, gpio_pin: %d, state: %d", endpoint_id, gpio_pin, !val.val.b);
+
+        err |= driver_update_gpio_value(gpio_pin, !val.val.b);
     } 
 
     return err;
@@ -265,7 +257,7 @@ esp_err_t plug_init(plug* plug) {
         return ESP_FAIL;
     }
 
-    err = gpio_set_level(plug->output_gpio_pin, DEFAULT_POWER ? 1 : 0);
+    err = driver_update_gpio_value(plug->output_gpio_pin, DEFAULT_POWER ? 0 : 1);
     if (err != ESP_OK) {
         ESP_LOGI(TAG, "Unable to set GPIO level");
     }
