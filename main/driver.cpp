@@ -332,6 +332,7 @@ driver_handle driver_button_init() {
 
 /**
  * @brief Device identification callback
+ * 
  */
 void device_identifier_cb() {
     gpio_set_direction((gpio_num_t)CONFIG_GPIO_INDICATOR_LED, GPIO_MODE_OUTPUT);
@@ -348,6 +349,7 @@ void device_identifier_cb() {
 
 /**
  * @brief Device commission window open callback
+ * 
  */
 void device_commission_window_open_cb() {
     gpio_set_direction((gpio_num_t)CONFIG_GPIO_INDICATOR_LED, GPIO_MODE_OUTPUT);
@@ -363,6 +365,7 @@ void device_commission_window_open_cb() {
 
 /**
  * @brief Device commission window close callback
+ * 
  */
 void device_commission_window_close_cb() {
     gpio_set_level((gpio_num_t)CONFIG_GPIO_INDICATOR_LED, 0);

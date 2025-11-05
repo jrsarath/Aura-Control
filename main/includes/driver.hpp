@@ -93,16 +93,19 @@ driver_handle driver_button_init(void);
 
 /**
  * @brief Device identifier callback
+ * 
  */
 void device_identifier_cb(void);
 
 /**
  * @brief Device commission window open callback
+ * 
  */
 void device_commission_window_open_cb(void);
 
 /**
  * @brief Device commission window close callback
+ * 
  */
 void device_commission_window_close_cb(void);
 

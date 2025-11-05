@@ -21,6 +21,13 @@ static led_strip_handle_t s_commissioning_strip = NULL;
 static volatile bool s_commissioning_running = false;
 static uint32_t s_commissioning_count = 0;
 
+// Identification blink state
+static TaskHandle_t s_ident_task = NULL;
+static volatile bool s_ident_running = false;
+static uint32_t s_ident_count = 0;
+static led_strip_handle_t s_ident_strip = NULL; // may point to s_commissioning_strip
+static bool s_ident_owns_strip = false;
+
 /**
  * @brief Button factory reset pressed callback
  * 
@@ -314,4 +321,128 @@ void argb_stop_commissioning(void) {
     }
 
     ESP_LOGI(TAG, "Commissioning stopped");
+}
+
+/**
+ * @brief ARGB identification task
+ * 
+ * @param arg 
+ */
+static void identification_task(void *arg) {
+    (void)arg;
+    ESP_LOGI(TAG, "ARGB identification task started (blinks=%u)", s_ident_count);
+
+    const uint8_t bright = 160;
+    const uint32_t on_ms = 300;
+    const uint32_t off_ms = 200;
+
+    for (uint32_t i = 0; i < s_ident_count && s_ident_running; ++i) {
+        if (s_ident_strip) {
+            argb_set_all(s_ident_strip, s_ident_count ? s_ident_count : 1, 0, 0, bright);
+        }
+        vTaskDelay(pdMS_TO_TICKS(on_ms));
+        if (!s_ident_running) break;
+        if (s_ident_strip) {
+            argb_clear(s_ident_strip);
+        }
+        vTaskDelay(pdMS_TO_TICKS(off_ms));
+    }
+
+    // Ensure off
+    if (s_ident_strip) {
+        argb_clear(s_ident_strip);
+    }
+
+    ESP_LOGI(TAG, "ARGB identification task stopping");
+
+    // cleanup if we own the strip
+    if (s_ident_owns_strip && s_ident_strip) {
+        led_strip_del(s_ident_strip);
+        s_ident_strip = NULL;
+        s_ident_owns_strip = false;
+    }
+
+    // mark task handle as NULL and clear running flag
+    TaskHandle_t t = s_ident_task;
+    s_ident_task = NULL;
+    s_ident_running = false;
+    if (t) vTaskDelete(NULL);
+}
+
+/**
+ * @brief ARGB identification blink
+ * 
+ * @param endpoint_id 
+ */
+void argb_identify_blink(uint16_t endpoint_id) {
+    // Cancel previous identification if running
+    if (s_ident_running) {
+        argb_identify_stop();
+    }
+
+    // Limit blinks to a reasonable upper bound
+    uint32_t blinks = endpoint_id;
+    const uint32_t max_blinks = 20;
+    if (blinks == 0) blinks = 1;
+    if (blinks > max_blinks) blinks = max_blinks;
+
+    // Prefer reusing commissioning strip if available
+    if (s_commissioning_strip) {
+        s_ident_strip = s_commissioning_strip;
+        s_ident_owns_strip = false;
+    } else {
+        // Default to GPIO 8 and single pixel if no commissioning strip
+        s_ident_strip = argb_init(8, 1, LED_MODEL_WS2812);
+        if (!s_ident_strip) {
+            ESP_LOGE(TAG, "Failed to init strip for identification");
+            return;
+        }
+        s_ident_owns_strip = true;
+    }
+
+    s_ident_count = blinks;
+    s_ident_running = true;
+
+    BaseType_t created = xTaskCreate(identification_task, "argb_ident", 3072, NULL, tskIDLE_PRIORITY + 1, &s_ident_task);
+    if (created != pdPASS) {
+        ESP_LOGE(TAG, "Failed to create identification task");
+        s_ident_running = false;
+        if (s_ident_owns_strip && s_ident_strip) {
+            led_strip_del(s_ident_strip);
+            s_ident_strip = NULL;
+            s_ident_owns_strip = false;
+        }
+    }
+}
+
+/**
+ * @brief Stop any running identification blink sequence.
+ * 
+ */
+void argb_identify_stop(void) {
+    if (!s_ident_running && s_ident_task == NULL) return;
+
+    s_ident_running = false;
+
+    const TickType_t wait_ticks = pdMS_TO_TICKS(1000);
+    const TickType_t poll_ticks = pdMS_TO_TICKS(50);
+    TickType_t waited = 0;
+    while (s_ident_task != NULL && waited < wait_ticks) {
+        vTaskDelay(poll_ticks);
+        waited += poll_ticks;
+    }
+
+    if (s_ident_task != NULL) {
+        vTaskDelete(s_ident_task);
+        s_ident_task = NULL;
+    }
+
+    if (s_ident_owns_strip && s_ident_strip) {
+        led_strip_del(s_ident_strip);
+        s_ident_strip = NULL;
+        s_ident_owns_strip = false;
+    }
+
+    s_ident_running = false;
+    ESP_LOGI(TAG, "Identification stopped");
 }

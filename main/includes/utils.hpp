@@ -93,3 +93,19 @@ void argb_start_commissioning(int gpio_num, uint32_t count);
  * 
  */
 void argb_stop_commissioning(void);
+
+/**
+ * @brief Start a non-blocking identification blink sequence.
+ *
+ * The strip will blink blue N times where N is the endpoint_id (clamped).
+ * Any previous identification sequence will be cancelled before starting.
+ *
+ * @param endpoint_id Number of blinks to perform (will be clamped to a sane max).
+ */
+void argb_identify_blink(uint16_t endpoint_id);
+
+/**
+ * @brief Stop any running identification blink sequence.
+ * 
+ */
+void argb_identify_stop(void);
