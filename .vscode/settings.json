@@ -15,5 +15,8 @@
     "--background-index",
     "--query-driver=/Users/jrsarath/.espressif/tools/riscv32-esp-elf/esp-14.2.0_20241119/riscv32-esp-elf/bin/riscv32-esp-elf-gcc",
     "--compile-commands-dir=/Users/jrsarath/Documents/GitHub/Aura-Control/build"
-  ]
+  ],
+  "idf.espIdfPath": "/Users/jrsarath/esp/v5.5.1/esp-idf",
+  "idf.toolsPath": "/Users/jrsarath/.espressif",
+  "idf.pythonInstallPath": "/opt/homebrew/bin/python3"
 }

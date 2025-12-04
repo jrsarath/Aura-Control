@@ -2,7 +2,7 @@
 #include <esp_system.h>
 #include <esp_https_ota.h>
 #include <esp_app_format.h>
-#include "includes/ota_manager.h"
+#include "includes/ota_manager.hpp"
 
 static const char* TAG = "ota_manager";
 

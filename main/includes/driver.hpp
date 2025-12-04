@@ -14,12 +14,6 @@ using namespace chip::app::Clusters;
 #include "esp_openthread_types.h"
 #endif
 
-#define DRIVER_H
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 typedef struct {
     int gpio_pin;
     uint16_t endpoint_id;
@@ -120,7 +114,3 @@ void driver_identify_pulse(uint16_t endpoint_id);
  * 
  */
 void driver_identify_stop(void);
-
-#ifdef __cplusplus
-}
-#endif

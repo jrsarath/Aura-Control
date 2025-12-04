@@ -9,14 +9,18 @@
 #include <esp_matter_ota.h>
 #include <esp_matter_console.h>
 #include <driver/gpio.h>
+
 #if CHIP_DEVICE_CONFIG_ENABLE_THREAD
 #include <platform/ESP32/OpenthreadLauncher.h>
 #endif
+
 #include <app/server/Server.h>
 #include <app/server/CommissioningWindowManager.h>
 
+#include "includes/config.hpp"
 #include "includes/variables.hpp"
 #include "includes/driver.hpp"
+#include "includes/ota_manager.hpp"
 #include "includes/utils.hpp"
 
 using namespace esp_matter;
@@ -113,6 +117,7 @@ static esp_err_t app_attribute_update_cb(callback_type_t type, uint16_t endpoint
 
 /**
  * @brief Application main entry point
+ * 
  */
 extern "C" void app_main() {
     esp_err_t err = ESP_OK;
@@ -124,6 +129,17 @@ extern "C" void app_main() {
         return;
     }
 
+    // Initialize OTA manager
+    err = OTAManager::getInstance().initialize();
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to initialize OTA manager");
+        return;
+    }
+
+    // Enable automatic update checks
+    OTAManager::getInstance().enableAutoCheck(true);
+    ESP_LOGI(TAG, "OTA manager initialized, running version: %s", OTAManager::getInstance().getCurrentVersion());
+
     // Initialize driver
     err = driver_init();
     if (err != ESP_OK) {
@@ -131,6 +147,7 @@ extern "C" void app_main() {
         return;
     }
 
+    // Initialize reset button
     driver_handle button_handle = driver_button_init();
     if (!button_handle) {
         ESP_LOGE(TAG, "Failed to initialize button");
@@ -138,6 +155,7 @@ extern "C" void app_main() {
     }
     app_reset_button_register(button_handle);
 
+    // Create Matter node
     node::config_t node_config;
     node_t *node = node::create(&node_config, app_attribute_update_cb, app_identification_cb);
     if (!node) {
@@ -168,7 +186,7 @@ extern "C" void app_main() {
         set_openthread_platform_config(&config);
     #endif
 
-    // Matter start
+    // Start Matter
     err = esp_matter::start(app_event_cb);
     abort_on_failure(err == ESP_OK, TAG, "Failed to start Matter, err:%d", err);
 
