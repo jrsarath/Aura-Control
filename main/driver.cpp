@@ -100,6 +100,37 @@ static void identification_task_drv(void *arg) {
 }
 
 /**
+ * @brief Input button callback
+ * 
+ * @param arg 
+ * @param data 
+ */
+static void driver_button_toggle_cb(void *arg, void *data) {
+    ESP_LOGI(TAG, "Toggle button pressed");
+}
+
+/**
+ * @brief Input button callback
+ * 
+ * @param arg 
+ * @param data 
+ */
+static void driver_input_button_toggle_cb(void *arg, void *data) {
+    plug_unit_endpoint* callback_data = (plug_unit_endpoint*) data;
+    ESP_LOGI(TAG, "Toggle button pressed, %d", callback_data->endpoint_id);
+
+    node_t *node = node::get();
+    endpoint_t *endpoint = endpoint::get(node, callback_data->endpoint_id);
+    cluster_t *cluster = cluster::get(endpoint, OnOff::Id);
+    attribute_t *attribute = attribute::get(cluster, OnOff::Attributes::OnOff::Id);
+
+    esp_matter_attr_val_t val = esp_matter_invalid(NULL);
+    attribute::get_val(attribute, &val);
+    val.val.b = !val.val.b;
+    attribute::update(callback_data->endpoint_id, cluster::get_id(cluster), attribute::get_id(attribute), &val);
+}
+
+/**
  * @brief Start the driver identification pulse
  * 
  * @param endpoint_id 
@@ -152,37 +183,6 @@ void driver_identify_stop(void) {
     }
     s_ident_running_drv = false;
     s_ident_gpio_drv = GPIO_NUM_NC;
-}
-
-/**
- * @brief Input button callback
- * 
- * @param arg 
- * @param data 
- */
-static void driver_button_toggle_cb(void *arg, void *data) {
-    ESP_LOGI(TAG, "Toggle button pressed");
-}
-
-/**
- * @brief Input button callback
- * 
- * @param arg 
- * @param data 
- */
-static void driver_input_button_toggle_cb(void *arg, void *data) {
-    plug_unit_endpoint* callback_data = (plug_unit_endpoint*) data;
-    ESP_LOGI(TAG, "Toggle button pressed, %d", callback_data->endpoint_id);
-
-    node_t *node = node::get();
-    endpoint_t *endpoint = endpoint::get(node, callback_data->endpoint_id);
-    cluster_t *cluster = cluster::get(endpoint, OnOff::Id);
-    attribute_t *attribute = attribute::get(cluster, OnOff::Attributes::OnOff::Id);
-
-    esp_matter_attr_val_t val = esp_matter_invalid(NULL);
-    attribute::get_val(attribute, &val);
-    val.val.b = !val.val.b;
-    attribute::update(callback_data->endpoint_id, cluster::get_id(cluster), attribute::get_id(attribute), &val);
 }
 
 /**
@@ -422,45 +422,4 @@ driver_handle driver_button_init() {
     ESP_ERROR_CHECK(iot_button_register_cb(btns[0], BUTTON_PRESS_DOWN, NULL, driver_button_toggle_cb, NULL));
     
     return (driver_handle)btns[0];
-}
-
-/**
- * @brief Device identification callback
- * 
- */
-void device_identifier_cb() {
-    gpio_set_direction((gpio_num_t)CONFIG_GPIO_INDICATOR_LED, GPIO_MODE_OUTPUT);
-    gpio_set_pull_mode((gpio_num_t)CONFIG_GPIO_INDICATOR_LED, GPIO_PULLUP_ONLY);
-
-    for (int blink_count = 0; blink_count < 6; blink_count++) {
-        gpio_set_level((gpio_num_t)CONFIG_GPIO_INDICATOR_LED, 1);
-        vTaskDelay(500 / portTICK_PERIOD_MS);
-        gpio_set_level((gpio_num_t)CONFIG_GPIO_INDICATOR_LED, 0);
-        vTaskDelay(500 / portTICK_PERIOD_MS);
-    }
-    gpio_set_level((gpio_num_t)CONFIG_GPIO_INDICATOR_LED, 0);
-}
-
-/**
- * @brief Device commission window open callback
- * 
- */
-void device_commission_window_open_cb() {
-    gpio_set_direction((gpio_num_t)CONFIG_GPIO_INDICATOR_LED, GPIO_MODE_OUTPUT);
-    gpio_set_pull_mode((gpio_num_t)CONFIG_GPIO_INDICATOR_LED, GPIO_PULLUP_ONLY);
-
-    while (1) {
-        gpio_set_level((gpio_num_t)CONFIG_GPIO_INDICATOR_LED, 1);
-        vTaskDelay(200 / portTICK_PERIOD_MS);
-        gpio_set_level((gpio_num_t)CONFIG_GPIO_INDICATOR_LED, 0);
-        vTaskDelay(200 / portTICK_PERIOD_MS);
-    }
-}
-
-/**
- * @brief Device commission window close callback
- * 
- */
-void device_commission_window_close_cb() {
-    gpio_set_level((gpio_num_t)CONFIG_GPIO_INDICATOR_LED, 0);
 }

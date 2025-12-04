@@ -6,14 +6,14 @@
 #include <driver/gpio.h>
 #include "variables.hpp"
 
+#if CHIP_DEVICE_CONFIG_ENABLE_THREAD
+#include "esp_openthread_types.h"
+#endif
+
 using namespace esp_matter;
 using namespace esp_matter::attribute;
 using namespace esp_matter::endpoint;
 using namespace chip::app::Clusters;
-
-#if CHIP_DEVICE_CONFIG_ENABLE_THREAD
-#include "esp_openthread_types.h"
-#endif
 
 typedef struct {
     int gpio_pin;
@@ -32,6 +32,18 @@ struct plug_unit_endpoint {
     gpio_num_t input_gpio_pin;
 };
 typedef void *driver_handle;
+
+/**
+ * @brief Start a non-blocking identification pulse on the physical switch.
+ *
+ */
+void driver_identify_pulse(uint16_t endpoint_id);
+
+/**
+ * @brief Stop any running identification pulse.
+ * 
+ */
+void driver_identify_stop(void);
 
 /**
  * @brief Update the attribute value
@@ -84,34 +96,3 @@ driver_handle input_switch_init(int gpio_pin, uint16_t endpoint_id);
  * @return driver_handle 
  */
 driver_handle driver_button_init(void);
-
-
-/**
- * @brief Device identifier callback
- * 
- */
-void device_identifier_cb(void);
-
-/**
- * @brief Device commission window open callback
- * 
- */
-void device_commission_window_open_cb(void);
-
-/**
- * @brief Device commission window close callback
- * 
- */
-void device_commission_window_close_cb(void);
-
-/**
- * @brief Start a non-blocking identification pulse on the physical switch.
- *
- */
-void driver_identify_pulse(uint16_t endpoint_id);
-
-/**
- * @brief Stop any running identification pulse.
- * 
- */
-void driver_identify_stop(void);
