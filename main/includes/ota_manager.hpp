@@ -7,8 +7,17 @@
 #include <freertos/task.h>
 #include "config.hpp"
 
+/**
+ * @brief Manages Over-The-Air (OTA) updates for the device.
+ * 
+ */
 class OTAManager {
     public:
+        /**
+         * @brief Get the singleton instance of the OTAManager.
+         * 
+         * @return OTAManager& Reference to the OTAManager instance.
+         */
         static OTAManager& getInstance() {
             static OTAManager instance;
             return instance;
