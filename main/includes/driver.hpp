@@ -3,6 +3,7 @@
 #include <freertos/FreeRTOS.h>
 #include <esp_err.h>
 #include <esp_matter.h>
+#include <driver/gpio.h>
 #include "variables.hpp"
 
 using namespace esp_matter;

@@ -1,4 +1,5 @@
 #include "includes/variables.hpp"
+#include <driver/gpio.h>
 
 // plug unit endpoint configurations
 const plug plugs[MAX_CONFIGURABLE_PLUGS] = {
