@@ -2,6 +2,7 @@
 #include <esp_system.h>
 #include <esp_https_ota.h>
 #include <esp_app_format.h>
+#include <esp_crt_bundle.h>
 #include "includes/ota_manager.hpp"
 
 static const char* TAG = "ota_manager";
@@ -61,9 +62,16 @@ void OTAManager::checkForUpdates() {
  */
 esp_err_t OTAManager::beginUpdate(const char* url) {
     if (update_in_progress) {
+        ESP_LOGI(TAG, "Update already in progress");
         return ESP_ERR_INVALID_STATE;
     }
 
+    if (!network_ready) {
+        ESP_LOGW(TAG, "Network not ready, skipping OTA attempt");
+        return ESP_ERR_INVALID_STATE;
+    }
+    
+    ESP_LOGI(TAG, "Beginning OTA update from %s", url);
     update_in_progress = true;
     
     // Start update task
@@ -93,11 +101,12 @@ void OTAManager::updateTask(void* pvParameter) {
     OTAManager* manager = static_cast<OTAManager*>(pvParameter);
     const char* update_url = OTA_UPDATE_URL;
 
-    esp_http_client_config_t config = {
-        .url = update_url,
-        .timeout_ms = OTA_FIRMWARE_TIMEOUT_MS,
-        .keep_alive_enable = true,
-    };
+    esp_http_client_config_t config = {};
+    config.url = update_url;
+    config.timeout_ms = OTA_FIRMWARE_TIMEOUT_MS;
+    config.keep_alive_enable = true;
+    config.crt_bundle_attach = esp_crt_bundle_attach;
+
 
     esp_https_ota_config_t ota_config = {
         .http_config = &config,
@@ -124,12 +133,14 @@ void OTAManager::updateTask(void* pvParameter) {
  * @param enable True to enable, false to disable.
  */
 void OTAManager::enableAutoCheck(bool enable) {
-    if (enable && !auto_check_enabled) {
+    bool was_enabled = auto_check_enabled;
+    auto_check_enabled = enable;
+    
+    if (enable && !was_enabled) {
         startAutoCheckTask();
-    } else if (!enable && auto_check_enabled) {
+    } else if (!enable && was_enabled) {
         stopAutoCheckTask();
     }
-    auto_check_enabled = enable;
 }
 
 /** 
@@ -137,13 +148,18 @@ void OTAManager::enableAutoCheck(bool enable) {
  * 
  */
 void OTAManager::startAutoCheckTask() {
+    ESP_LOGI(TAG, "Starting periodic OTA check task");
     xTaskCreate(
         [](void* pvParameter) {
             OTAManager* manager = static_cast<OTAManager*>(pvParameter);
             TickType_t last_check = xTaskGetTickCount();
-            
+            ESP_LOGI(TAG, "Is auto check enabled? %d", manager->auto_check_enabled);
             while (manager->auto_check_enabled) {
-                manager->checkForUpdates();
+                if (manager->network_ready) {
+                    manager->checkForUpdates();
+                } else {
+                    ESP_LOGW(TAG, "Skipping OTA check, network not ready");
+                }
                 vTaskDelayUntil(&last_check, pdMS_TO_TICKS(OTA_CHECK_INTERVAL_MS));
             }
             vTaskDelete(NULL);
@@ -162,6 +178,7 @@ void OTAManager::startAutoCheckTask() {
  */
 void OTAManager::stopAutoCheckTask() {
     if (task_handle) {
+        ESP_LOGI(TAG, "Stopping periodic OTA check task");
         vTaskDelete(task_handle);
         task_handle = nullptr;
     }
