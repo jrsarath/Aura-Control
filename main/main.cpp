@@ -135,7 +135,6 @@ extern "C" void app_main() {
         ESP_LOGE(TAG, "Failed to initialize OTA manager");
         return;
     }
-
     // Enable automatic update checks
     OTAManager::getInstance().enableAutoCheck(true);
     ESP_LOGI(TAG, "OTA manager initialized, running version: %s", OTAManager::getInstance().getCurrentVersion());
